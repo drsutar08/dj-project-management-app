@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Regal Music Manager",
+    "slug": "regal-music-manager",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.regalmusic.manager" },
+    "android": {
+      "package": "com.regalmusic.manager",
+      "adaptiveIcon": { "backgroundColor": "#1c1325" }
+    }
+  }
+}
