@@ -112,6 +112,16 @@ const OR = {
   'Other numbers': 'ଅନ୍ୟ ନମ୍ବର', '+ Add another number': '+ ଆଉ ଏକ ନମ୍ବର ଯୋଡନ୍ତୁ', 'Main number (WhatsApp)': 'ମୁଖ୍ୟ ନମ୍ବର (ହ୍ୱାଟସଆପ୍)',
   'One programme in the day and one at night on the same date is fine.': 'ଏକା ତାରିଖରେ ଦିନରେ ଗୋଟିଏ ଓ ରାତିରେ ଗୋଟିଏ ପ୍ରୋଗ୍ରାମ ଠିକ୍ ଅଛି।',
 
+  // Reminders, attendance, advances, bill photos
+  Reminders: 'ସ୍ମାରକ', 'Today & tomorrow': 'ଆଜି ଓ କାଲି', 'Collect balance': 'ବାକି ଟଙ୍କା ଆଦାୟ', Tomorrow: 'କାଲି', due: 'ବାକି',
+  'Remind me the evening before at': 'ପୂର୍ବ ସନ୍ଧ୍ୟାରେ ମନେପକାନ୍ତୁ', 'Balance reminder the morning after': 'ପରଦିନ ସକାଳେ ବାକି ଟଙ୍କା ମନେପକାନ୍ତୁ', On: 'ଚାଲୁ', Off: 'ବନ୍ଦ',
+  Attendance: 'ଉପସ୍ଥାନ', 'Monthly attendance': 'ମାସିକ ଉପସ୍ଥାନ', 'All staff': 'ସମସ୍ତ କର୍ମଚାରୀ', 'Give advance': 'ଅଗ୍ରିମ ଦିଅନ୍ତୁ',
+  'Wage payment': 'ମଜୁରି ପେମେଣ୍ଟ', Advance: 'ଅଗ୍ରିମ', 'Record advance': 'ଅଗ୍ରିମ ଲେଖନ୍ତୁ', 'Record payment': 'ପେମେଣ୍ଟ ଲେଖନ୍ତୁ',
+  'Earned so far': 'ଏପର୍ଯ୍ୟନ୍ତ ଅର୍ଜିତ', '− Wages paid': '− ପୈଠ ମଜୁରି', '− Advances given': '− ଦିଆଯାଇଥିବା ଅଗ୍ରିମ', 'To pay now': 'ଏବେ ଦେବାକୁ',
+  'Advance still to recover': 'ଫେରସ୍ତ ବାକି ଅଗ୍ରିମ', 'Taken from next wages': 'ପରବର୍ତ୍ତୀ ମଜୁରିରୁ କଟାଯିବ', 'Wages earned': 'ଅର୍ଜିତ ମଜୁରି', 'Paid this month': 'ଏହି ମାସ ପୈଠ',
+  'Staff programmes this month': 'ଏହି ମାସର କର୍ମଚାରୀ ପ୍ରୋଗ୍ରାମ', 'of which advances': 'ସେଥିରୁ ଅଗ୍ରିମ', advance: 'ଅଗ୍ରିମ',
+  'Bill photo (optional)': 'ବିଲ୍ ଫଟୋ (ଇଚ୍ଛାଧୀନ)', 'Bill photo': 'ବିଲ୍ ଫଟୋ', 'Remove photo': 'ଫଟୋ ହଟାନ୍ତୁ',
+
   // Common messages
   'Booking saved': 'ବୁକିଂ ସେଭ୍ ହେଲା', 'Booking updated': 'ବୁକିଂ ଅପଡେଟ୍ ହେଲା', 'Payment recorded': 'ପେମେଣ୍ଟ ଲେଖାଗଲା', 'Expense added': 'ଖର୍ଚ୍ଚ ଯୋଡାଗଲା',
   'Expense removed': 'ଖର୍ଚ୍ଚ ହଟାଗଲା', 'Staff assigned': 'କର୍ମଚାରୀ ଦିଆଗଲା', 'Checklist saved': 'ଚେକ୍‌ଲିଷ୍ଟ ସେଭ୍ ହେଲା', 'Business details saved': 'ବ୍ୟବସାୟ ବିବରଣୀ ସେଭ୍ ହେଲା',

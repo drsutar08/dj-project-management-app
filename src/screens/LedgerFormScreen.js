@@ -1,11 +1,13 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Screen, Field, DateField, FRow, Chips, opts, Btn, T, Empty, toast } from '../components/ui';
+import { Screen, Field, DateField, FRow, Chips, opts, Btn, T, Empty, Card, MoneyRow, toast } from '../components/ui';
+import { useTheme } from '../theme';
 import { useStore, useSorted } from '../store';
 import { MODES } from '../defaults';
-import { dmy, empMoney, n, today } from '../utils';
+import { dmy, empMoney, inr, n, today } from '../utils';
 
 export default function LedgerFormScreen({ navigation, route }) {
+  const c = useTheme();
   const { saveEntry, ledger } = useStore();
   const { employees, projects } = useSorted();
   const kind = route.params?.kind || 'pay';
@@ -18,14 +20,15 @@ export default function LedgerFormScreen({ navigation, route }) {
     projectId: route.params?.projectId || '',
     qty: '1',
     rate: emp0.rate ? String(emp0.rate) : '',
-    amount: earn ? (emp0.rate ? String(emp0.rate) : '') : String(Math.max(0, empMoney(first, ledger).due) || ''),
+    amount: earn ? (emp0.rate ? String(emp0.rate) : '') : route.params?.advance ? '' : String(Math.max(0, empMoney(first, ledger).due) || ''),
     mode: 'Cash',
+    payType: route.params?.advance ? 'advance' : 'wage',
     date: today(),
     note: '',
   });
   const set = (k) => (v) => setF((s) => ({ ...s, [k]: v }));
 
-  useLayoutEffect(() => navigation.setOptions({ title: earn ? 'Add work / wage' : 'Pay staff' }), [navigation, earn]);
+  useLayoutEffect(() => navigation.setOptions({ title: earn ? 'Add work / wage' : f.payType === 'advance' ? 'Give advance' : 'Pay staff' }), [navigation, earn, f.payType]);
 
   if (!employees.length)
     return (
@@ -57,9 +60,9 @@ export default function LedgerFormScreen({ navigation, route }) {
   const onSave = () => {
     if (!(n(f.amount) > 0)) return toast('Enter an amount above zero.');
     const entry = { kind, empId: f.empId, projectId: f.projectId || '', amount: n(f.amount), date: f.date || today(), note: f.note.trim() };
-    if (earn) { entry.qty = n(f.qty) || 1; entry.rate = n(f.rate); } else entry.mode = f.mode;
+    if (earn) { entry.qty = n(f.qty) || 1; entry.rate = n(f.rate); } else { entry.mode = f.mode; if (f.payType === 'advance') entry.advance = true; }
     saveEntry(entry);
-    toast(earn ? 'Work added' : 'Payment recorded');
+    toast(earn ? 'Work added' : f.payType === 'advance' ? 'Advance recorded' : 'Payment recorded');
     navigation.goBack();
   };
 
@@ -79,7 +82,28 @@ export default function LedgerFormScreen({ navigation, route }) {
         </>
       ) : (
         <>
-          <Field label="Amount paid (₹)" required value={f.amount} onChangeText={set('amount')} keyboardType="decimal-pad" />
+          <Chips
+            options={opts([['wage', 'Wage payment'], ['advance', 'Advance']])}
+            value={f.payType}
+            onChange={(v) => setF((s) => ({ ...s, payType: v, amount: v === 'advance' ? '' : String(Math.max(0, empMoney(s.empId, ledger).due) || '') }))}
+          />
+          {(() => {
+            const em = empMoney(f.empId, ledger);
+            return (
+              <Card style={{ gap: 6 }}>
+                <MoneyRow label="Earned so far" value={inr(em.earned)} />
+                {em.wagesPaid ? <MoneyRow label="− Wages paid" value={inr(em.wagesPaid)} /> : null}
+                {em.advances ? <MoneyRow label="− Advances given" value={inr(em.advances)} /> : null}
+                <MoneyRow total label={em.due >= 0 ? 'To pay now' : 'Advance still to recover'} value={inr(Math.abs(em.due))} color={em.due > 0 ? c.bad : em.due < 0 ? c.warn : c.good} />
+              </Card>
+            );
+          })()}
+          <T muted size={12.5}>
+            {f.payType === 'advance'
+              ? 'An advance is money given before the work. It is taken off their wages automatically.'
+              : 'Pays wages already earned. Any advance given earlier is already taken off.'}
+          </T>
+          <Field label={f.payType === 'advance' ? 'Advance amount (₹)' : 'Amount paid (₹)'} required value={f.amount} onChangeText={set('amount')} keyboardType="decimal-pad" />
           <Chips options={opts(MODES)} value={f.mode} onChange={set('mode')} />
         </>
       )}
@@ -89,7 +113,7 @@ export default function LedgerFormScreen({ navigation, route }) {
       </View>
       <DateField label="Date" required value={f.date} onChange={set('date')} />
       <Field label="Note" value={f.note} onChangeText={set('note')} placeholder={earn ? 'e.g. Night shift, loading' : 'e.g. Advance, full settlement'} />
-      <Btn title={earn ? 'Add work' : 'Record payment'} onPress={onSave} />
+      <Btn title={earn ? 'Add work' : f.payType === 'advance' ? 'Record advance' : 'Record payment'} onPress={onSave} />
     </Screen>
   );
 }

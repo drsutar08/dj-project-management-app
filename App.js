@@ -1,6 +1,7 @@
-import React from 'react';
-import { View, Text, Pressable } from 'react-native';
-import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
+import React, { useEffect } from 'react';
+import { View, Text, Pressable, Platform } from 'react-native';
+import { NavigationContainer, DefaultTheme, DarkTheme, useNavigationContainerRef } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +11,8 @@ import { useTheme, shadow } from './src/theme';
 import { ToastHost, Icon, T, useLang } from './src/components/ui';
 import { tr } from './src/i18n';
 import { LockGate } from './src/lock';
+import { ReminderScheduler } from './src/reminders';
+import AttendanceScreen from './src/screens/AttendanceScreen';
 
 import HomeScreen from './src/screens/HomeScreen';
 import BookingsScreen from './src/screens/BookingsScreen';
@@ -103,6 +106,16 @@ function Tabs() {
 }
 
 function Root() {
+  const navRef = useNavigationContainerRef();
+  // Tapping a programme reminder opens that booking.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const sub = Notifications.addNotificationResponseReceivedListener((r) => {
+      const id = r && r.notification && r.notification.request.content.data && r.notification.request.content.data.bookingId;
+      if (id && navRef.isReady()) navRef.navigate('Booking', { id });
+    });
+    return () => sub.remove();
+  }, [navRef]);
   const c = useTheme();
   const base = c.dark ? DarkTheme : DefaultTheme;
   const navTheme = { ...base, colors: { ...base.colors, background: c.bg, card: c.bg, text: c.fg, primary: c.accent, border: c.line } };
@@ -116,7 +129,8 @@ function Root() {
     headerTitle: ({ children }) => <T weight="800" size={18} numberOfLines={1}>{children}</T>,
   };
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer theme={navTheme} ref={navRef}>
+      <ReminderScheduler />
       <StatusBar style={c.dark ? 'light' : 'dark'} />
       <Stack.Navigator screenOptions={header}>
         <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
@@ -128,6 +142,7 @@ function Root() {
         <Stack.Screen name="Bill" component={BillScreen} />
         <Stack.Screen name="Stock" component={InventoryScreen} />
         <Stack.Screen name="Calendar" component={CalendarScreen} />
+        <Stack.Screen name="Attendance" component={AttendanceScreen} options={{ title: 'Attendance' }} />
         <Stack.Screen name="Customers" component={CustomersScreen} />
         <Stack.Screen name="Customer" component={CustomerScreen} options={{ title: 'Customer' }} />
         <Stack.Screen name="PaymentReceipt" component={PaymentReceiptScreen} options={{ title: 'Payment receipt' }} />

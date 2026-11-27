@@ -394,7 +394,7 @@ export default function BookingDetailScreen({ navigation, route }) {
                 <Row
                   key={e.id}
                   onPress={() => navigation.navigate('ExpenseForm', { id: e.id })}
-                  left={<Tile icon="receipt-outline" t="warn" />}
+                  left={<Tile icon={(e.photos || []).length ? 'image-outline' : 'receipt-outline'} t="warn" />}
                   title={e.category || 'Expense'}
                   sub={[dmy(e.date), e.mode, e.note].filter(Boolean).join(' · ')}
                   right={inr(e.amount)}

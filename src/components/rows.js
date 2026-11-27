@@ -68,10 +68,10 @@ export function LedRow({ l }) {
     <Row
       left={<Tile icon={earn ? 'briefcase-outline' : 'cash-outline'} t={earn ? 'warn' : 'good'} />}
       title={e ? e.name : 'Removed staff'}
-      sub={[dmy(l.date), earn ? 'Work' + (l.qty ? ' ×' + l.qty : '') : 'Paid · ' + (l.mode || 'Cash'), p && p.customerName, l.note].filter(Boolean).join(' · ')}
+      sub={[dmy(l.date), earn ? 'Work' + (l.qty ? ' ×' + l.qty : '') : (l.advance ? 'Advance · ' : 'Paid · ') + (l.mode || 'Cash'), p && p.customerName, l.note].filter(Boolean).join(' · ')}
       right={(earn ? '+' : '−') + inr(l.amount)}
       rightColor={earn ? undefined : c.good}
-      rightSub={earn ? 'earned' : 'paid'}
+      rightSub={earn ? 'earned' : l.advance ? 'advance' : 'paid'}
       extra={<RemoveBtn onPress={() => deleteEntry(l.id)} />}
     />
   );

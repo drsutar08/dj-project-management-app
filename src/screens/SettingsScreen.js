@@ -10,6 +10,45 @@ import { BILL_COLORS, billPalette, isHexColor, normHex } from '../bill';
 import { bioAvailable, hashPin, PIN_LENGTH } from '../lock';
 import { isUpiId } from '../upi';
 import { LANGS } from '../i18n';
+import { askPermission, DEFAULT_REMIND_AT, notificationsSupported } from '../reminders';
+
+const REMIND_TIMES = [['17:00', '5 PM'], ['18:00', '6 PM'], ['19:00', '7 PM'], ['20:00', '8 PM'], ['21:00', '9 PM']];
+
+// Phone notifications for programmes and balances.
+function RemindersCard() {
+  const c = useTheme();
+  const { settings, saveSettings } = useStore();
+  const on = !!settings.remindersOn;
+  const toggle = async (v) => {
+    if (v && !(await askPermission())) return toast('Allow notifications for this app in your phone settings.');
+    saveSettings({ remindersOn: v });
+    toast(v ? 'Reminders on' : 'Reminders off');
+  };
+  return (
+    <Card style={{ gap: 12 }}>
+      <T weight="800" size={17}>Reminders</T>
+      <T muted size={13}>The evening before each programme, the phone reminds you who, when and where. The morning after, it reminds you if the customer still owes money.</T>
+      {notificationsSupported ? (
+        <>
+          <Chips options={opts([[false, 'Off'], [true, 'On']])} value={on} onChange={toggle} />
+          {on ? (
+            <>
+              <T muted size={12.5} weight="700">Remind me the evening before at</T>
+              <Chips options={opts(REMIND_TIMES)} value={settings.remindAt || DEFAULT_REMIND_AT} onChange={(v) => saveSettings({ remindAt: v })} />
+              <T muted size={12.5} weight="700">Balance reminder the morning after</T>
+              <Chips options={opts([[true, 'On'], [false, 'Off']])} value={settings.remindBalance !== false} onChange={(v) => saveSettings({ remindBalance: v })} />
+            </>
+          ) : null}
+        </>
+      ) : (
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: c.surface2, borderRadius: 12, padding: 12 }}>
+          <Icon name="phone-portrait-outline" size={18} color={c.muted} />
+          <T muted size={12.5} style={{ flex: 1 }}>Phone notifications work in the phone app. Here, today’s and tomorrow’s programmes and balances due are shown on the Home screen.</T>
+        </View>
+      )}
+    </Card>
+  );
+}
 
 // App lock (PIN, fingerprint) and how much of the Aadhaar number prints on bills.
 function PrivacyCard() {
@@ -308,6 +347,8 @@ export default function SettingsScreen({ navigation }) {
         <Field label="Rules printed on the bill (one per line)" value={f.rules} onChangeText={set('rules')} multiline />
         <Btn title="Save business details" onPress={onSave} />
       </Card>
+
+      <RemindersCard />
 
       <PrivacyCard />
 

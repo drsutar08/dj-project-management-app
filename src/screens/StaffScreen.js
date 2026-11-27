@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { TextInput, View } from 'react-native';
-import { Screen, List, Empty, Card, MoneyRow, LinkBtn, HeaderBtn } from '../components/ui';
+import { Screen, List, Empty, Card, MoneyRow, LinkBtn, HeaderBtn, Btn } from '../components/ui';
 import { EmpRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
@@ -37,6 +37,7 @@ export default function StaffScreen({ navigation }) {
         style={[{ backgroundColor: c.surface2, color: c.fg, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 15 }, shadow]}
       />
       <Card><MoneyRow label="Total wages to pay" value={inr(due)} color={due > 0 ? c.bad : undefined} /></Card>
+      <Btn variant="secondary" title="Monthly attendance" onPress={() => navigation.navigate('Attendance')} />
       {list.length ? (
         <List>{list.map((e) => <EmpRow key={e.id} e={e} onPress={() => navigation.navigate('StaffMember', { id: e.id })} />)}</List>
       ) : (

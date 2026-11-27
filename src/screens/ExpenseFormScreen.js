@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useState } from 'react';
-import { View } from 'react-native';
-import { Screen, Field, DateField, Chips, opts, Btn, ConfirmBtn, T, toast } from '../components/ui';
+import { View, Pressable, Image, Modal, Platform } from 'react-native';
+import { Screen, Field, DateField, Chips, opts, Btn, BtnRow, ConfirmBtn, T, Icon, toast } from '../components/ui';
+import { pickDocument, removeDocumentFile } from '../docs';
 import { useStore, useSorted } from '../store';
 import { MODES } from '../defaults';
 import { useTheme } from '../theme';
@@ -15,10 +16,25 @@ export default function ExpenseFormScreen({ navigation, route }) {
   const pre = route.params?.projectId ? projects.find((p) => p.id === route.params.projectId) : null;
   const [f, setF] = useState(
     existing
-      ? { ...existing, amount: String(existing.amount || '') }
-      : { amount: '', category: route.params?.category || cats[0] || 'Other', date: pre?.bookingDate || route.params?.date || today(), projectId: pre?.id || '', mode: 'Cash', note: '' }
+      ? { ...existing, amount: String(existing.amount || ''), photos: [...(existing.photos || [])] }
+      : { amount: '', category: route.params?.category || cats[0] || 'Other', date: pre?.bookingDate || route.params?.date || today(), projectId: pre?.id || '', mode: 'Cash', note: '', photos: [] }
   );
   const set = (k) => (v) => setF((s) => ({ ...s, [k]: v }));
+  const [removed, setRemoved] = useState([]); // photo files to delete when saved
+  const [view, setView] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const addPhoto = async (fromCamera) => {
+    setBusy(true);
+    try {
+      const d = await pickDocument(fromCamera);
+      if (d) setF((s) => ({ ...s, photos: [...(s.photos || []), { id: d.id, uri: d.uri, date: today() }] }));
+    } catch (e) {
+      toast(e && e.message === 'camera-permission' ? 'Allow camera access in phone settings to take a photo.' : 'Couldn’t add that picture. Try another one.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const removePhoto = (ph) => { setRemoved((r) => [...r, ph]); setF((s) => ({ ...s, photos: s.photos.filter((x) => x.id !== ph.id) })); setView(null); };
   const catOpts = f.category && !cats.includes(f.category) ? [...cats, f.category] : cats;
 
   useLayoutEffect(() => navigation.setOptions({ title: existing ? 'Edit expense' : 'Add expense' }), [navigation, existing]);
@@ -35,7 +51,9 @@ export default function ExpenseFormScreen({ navigation, route }) {
       ...(existing || {}),
       amount: n(f.amount), category: f.category || 'Other', date: f.date || today(),
       projectId: f.projectId || '', mode: f.mode || 'Cash', note: String(f.note || '').trim(),
+      photos: f.photos || [],
     });
+    removed.forEach((ph) => removeDocumentFile(ph));
     toast(existing ? 'Expense updated' : 'Expense added');
     navigation.goBack();
   };
@@ -67,12 +85,45 @@ export default function ExpenseFormScreen({ navigation, route }) {
       <Chips options={opts(MODES)} value={f.mode} onChange={set('mode')} />
       <Field label="Note" value={f.note} onChangeText={set('note')} placeholder="Diesel for generator, pickup rent, lunch for team…" />
 
+      {/* Photo of the bill / receipt for this expense */}
+      <View style={{ gap: 8 }}>
+        <T muted size={12.5} weight="700">Bill photo (optional)</T>
+        {(f.photos || []).length ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {f.photos.map((ph) => (
+              <Pressable key={ph.id} onPress={() => setView(ph)} accessibilityRole="button" accessibilityLabel="Open bill photo">
+                <Image source={{ uri: ph.uri }} style={{ width: 88, height: 88, borderRadius: 12, backgroundColor: c.surface2, borderWidth: 1, borderColor: c.line }} resizeMode="cover" />
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+        <BtnRow>
+          {Platform.OS !== 'web' ? <Btn variant="secondary" title={busy ? 'Opening…' : 'Take photo'} onPress={() => addPhoto(true)} disabled={busy} /> : null}
+          <Btn variant="secondary" title={busy ? 'Opening…' : 'Choose from photos'} onPress={() => addPhoto(false)} disabled={busy} />
+        </BtnRow>
+      </View>
+
+      <Modal visible={!!view} transparent animationType="fade" onRequestClose={() => setView(null)}>
+        <View style={{ flex: 1, backgroundColor: '#0b0918', padding: 16, paddingTop: 48, gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <T color="#ffffff" weight="800" size={17} style={{ flex: 1 }}>Bill photo</T>
+            <Pressable onPress={() => setView(null)} accessibilityRole="button" accessibilityLabel="Close" hitSlop={10}
+              style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="close" size={22} color="#ffffff" />
+            </Pressable>
+          </View>
+          {view ? <Image source={{ uri: view.uri }} style={{ flex: 1, width: '100%' }} resizeMode="contain" accessibilityLabel="Bill photo" /> : null}
+          <ConfirmBtn title="Remove photo" confirmTitle="Tap again to remove" onConfirm={() => removePhoto(view)} />
+        </View>
+      </Modal>
+
       <Btn title={existing ? 'Save changes' : 'Add expense'} onPress={onSave} />
       {existing ? (
         <ConfirmBtn
           title="Delete expense"
           confirmTitle="Tap again to delete"
           onConfirm={() => {
+            (existing.photos || []).forEach((ph) => removeDocumentFile(ph));
             deleteExpense(existing.id);
             toast('Expense deleted');
             navigation.goBack();

@@ -4,11 +4,11 @@ import { Screen, Card, T, H2, KV, Btn, BtnRow, List, Empty, LinkBtn, HeaderBtn }
 import { LedRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
-import { dmy, empMoney, inr, maskId } from '../utils';
+import { attendance, dmy, empMoney, inr, maskId, MON, today } from '../utils';
 
 export default function StaffDetailScreen({ navigation, route }) {
   const c = useTheme();
-  const { employees } = useStore();
+  const { employees, projects } = useStore();
   const { ledger } = useSorted();
   const e = employees.find((x) => x.id === route.params.id);
 
@@ -20,6 +20,14 @@ export default function StaffDetailScreen({ navigation, route }) {
   if (!e) return <Screen><Empty title="Staff member not found" /></Screen>;
   const m = empMoney(e.id, ledger);
   const led = ledger.filter((l) => l.empId === e.id);
+  // Last 6 months of attendance for this person
+  const td = today();
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const [y, mo] = td.split('-').map(Number);
+    const t = y * 12 + (mo - 1) - i;
+    return Math.floor(t / 12) + '-' + String((t % 12) + 1).padStart(2, '0');
+  });
+  const att = months.map((ym) => ({ ym, a: attendance([e], ledger, projects, ym)[0] }));
 
   return (
     <Screen>
@@ -27,18 +35,34 @@ export default function StaffDetailScreen({ navigation, route }) {
         <View style={[{ flex: 1, backgroundColor: c.ink2, borderRadius: 20, padding: 16 }, shadow]}>
           <T color={c.inkMuted} size={12} weight="600">{m.due >= 0 ? 'To pay' : 'Advance given'}</T>
           <T color={c.inkFg} size={24} weight="800">{inr(Math.abs(m.due))}</T>
-          <T color={c.inkMuted} size={12}>Earned minus paid</T>
+          <T color={c.inkMuted} size={12}>{m.due >= 0 && m.advances ? 'After ' + inr(m.advances) + ' advance' : m.due < 0 ? 'Taken from next wages' : 'Earned minus paid'}</T>
         </View>
         <View style={[{ flex: 1, backgroundColor: c.surface, borderRadius: 20, padding: 16 }, shadow]}>
           <T muted size={12} weight="600">Earned</T>
           <T size={20} weight="800">{inr(m.earned)}</T>
-          <T muted size={12}>Paid {inr(m.paid)}</T>
+          <T muted size={12}>Paid {inr(m.wagesPaid)}{m.advances ? ' + ' + inr(m.advances) + ' adv.' : ''}</T>
         </View>
       </View>
       <BtnRow>
         <Btn title={'Pay ' + String(e.name).split(' ')[0]} onPress={() => navigation.navigate('LedgerForm', { kind: 'pay', empId: e.id })} />
+        <Btn variant="secondary" title="Give advance" onPress={() => navigation.navigate('LedgerForm', { kind: 'pay', empId: e.id, advance: true })} />
         <Btn variant="secondary" title="+ Add work" onPress={() => navigation.navigate('LedgerForm', { kind: 'earn', empId: e.id })} />
       </BtnRow>
+      <View style={{ gap: 12 }}>
+        <H2 right="All staff" onRight={() => navigation.navigate('Attendance')}>Attendance</H2>
+        <Card style={{ gap: 10 }}>
+          {att.map(({ ym, a }) => (
+            <View key={ym} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <T weight="700" style={{ width: 74 }}>{MON[Number(ym.slice(5)) - 1]} {ym.slice(0, 4)}</T>
+              <View style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: c.surface2, overflow: 'hidden' }}>
+                <View style={{ width: Math.min(100, a.programmes.length * 10) + '%', height: 8, borderRadius: 4, backgroundColor: c.accent }} />
+              </View>
+              <T weight="800" style={{ minWidth: 88, textAlign: 'right' }}>{a.programmes.length} prog.</T>
+              <T muted size={12.5} style={{ minWidth: 70, textAlign: 'right' }}>{inr(a.earned)}</T>
+            </View>
+          ))}
+        </Card>
+      </View>
       <Card>
         <KV
           rows={[

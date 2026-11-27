@@ -1,6 +1,8 @@
 import React, { useLayoutEffect } from 'react';
 import { View, Pressable } from 'react-native';
-import { Screen, T, H2, List, Empty, Row, Tile, Icon } from '../components/ui';
+import { Screen, T, H2, List, Empty, Row, Tile, Icon, WhatsAppBtn } from '../components/ui';
+import { dueList } from '../reminders';
+import { openWhatsApp, reminderText } from '../share';
 import { ProjRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
@@ -104,6 +106,7 @@ export default function HomeScreen({ navigation }) {
   const toBill = projects.filter(isReadyToBill);
   const open = (p) => navigation.navigate('Booking', { id: p.id });
   const low = items.filter(isLow);
+  const due = dueList(projects, ledger, td);
   const billed = projects.filter((p) => p.status === 'final').length;
   const [yy, mm] = td.split('-').map(Number);
   const monthPL = periodPL({ projects, ledger, expenses, moves, items }, ym + '-01', ym + '-' + daysInMonth(yy, mm));
@@ -170,6 +173,46 @@ export default function HomeScreen({ navigation }) {
           />
         </View>
       </View>
+
+      {due.soon.length ? (
+        <View style={{ gap: 12 }}>
+          <H2>Today & tomorrow</H2>
+          <List>
+            {due.soon.map((p) => (
+              <Row
+                key={p.id}
+                onPress={() => open(p)}
+                left={<Tile icon={p.shift === 'Day' ? 'sunny' : 'moon'} t={p.bookingDate === td ? 'warn' : 'plum'} />}
+                title={p.customerName || 'Programme'}
+                sub={[p.bookingDate === td ? 'Today' : 'Tomorrow', [p.startTime, p.endTime].filter(Boolean).join(' – '), p.from].filter(Boolean).join(' · ')}
+                right={p.shift || ''}
+                rightSub={p.segment || ''}
+              />
+            ))}
+          </List>
+        </View>
+      ) : null}
+
+      {due.collect.length ? (
+        <View style={{ gap: 12 }}>
+          <H2>Collect balance</H2>
+          <List>
+            {due.collect.slice(0, 5).map((p) => (
+              <Row
+                key={p.id}
+                onPress={() => open(p)}
+                left={<Tile icon="cash-outline" t="bad" />}
+                title={p.customerName || 'Customer'}
+                sub={'Programme ' + dmy(p.bookingDate)}
+                right={inr(projMoney(p, ledger).balance)}
+                rightColor={c.bad}
+                rightSub="due"
+                extra={p.mobile ? <View style={{ marginLeft: 6 }}><WhatsAppBtn compact title={'Send reminder to ' + (p.customerName || 'customer')} onPress={() => openWhatsApp(p.mobile, reminderText(p, settings, ledger))} /></View> : null}
+              />
+            ))}
+          </List>
+        </View>
+      ) : null}
 
       {toBill.length ? (
         <View style={{ gap: 12 }}>

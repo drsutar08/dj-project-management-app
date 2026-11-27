@@ -66,14 +66,36 @@ export function projMoney(p, ledger) {
   return { total, extras, disc, net, paid, balance: net - paid, labour, profit: net - labour };
 }
 
+// Staff money. Advances are payments marked as advance; they come off what the person has
+// earned, the same way wage payments do. advanceLeft is advance not yet covered by wages earned.
 export function empMoney(id, ledger) {
-  let earned = 0, paid = 0;
+  let earned = 0, paid = 0, advances = 0;
   (ledger || []).forEach((l) => {
     if (l.empId !== id) return;
     if (l.kind === 'earn') earned += n(l.amount);
-    else paid += n(l.amount);
+    else { paid += n(l.amount); if (l.advance) advances += n(l.amount); }
   });
-  return { earned, paid, due: earned - paid };
+  const wagesPaid = paid - advances;
+  const advanceLeft = Math.max(0, advances - Math.max(0, earned - wagesPaid));
+  return { earned, paid, advances, wagesPaid, advanceLeft, due: earned - paid };
+}
+
+// Attendance for a month (ym = "YYYY-MM"): per person, programmes worked, days, earned and paid.
+export function attendance(employees, ledger, projects, ym) {
+  return (employees || []).map((e) => {
+    const rows = (ledger || []).filter((l) => l.empId === e.id && String(l.date || '').startsWith(ym));
+    const work = rows.filter((l) => l.kind === 'earn');
+    const progIds = [...new Set(work.map((l) => l.projectId).filter(Boolean))];
+    return {
+      e,
+      programmes: progIds.map((id) => (projects || []).find((p) => p.id === id)).filter(Boolean)
+        .sort((a, b) => String(a.bookingDate).localeCompare(String(b.bookingDate))),
+      days: new Set(work.map((l) => l.date)).size,
+      earned: work.reduce((a, l) => a + n(l.amount), 0),
+      paid: rows.filter((l) => l.kind !== 'earn').reduce((a, l) => a + n(l.amount), 0),
+      advances: rows.filter((l) => l.kind !== 'earn' && l.advance).reduce((a, l) => a + n(l.amount), 0),
+    };
+  });
 }
 
 export const isReadyToBill = (p) =>
