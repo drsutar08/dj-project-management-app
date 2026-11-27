@@ -52,10 +52,10 @@ export function billHTML(p, settings, ledger) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${CSS}</style></head><body>
 <div class="bill">
 <span class="tag">${fin ? 'FINAL BILL' : 'ORDER RECEIPT'}</span>
-<div class="brand">${brand(s.name)}</div>
-<div class="tagline">${esc(String(s.tagline).toUpperCase())}</div>
-<div class="contact">Mob: ${esc(s.phones)}</div>
-<div class="addr">${esc(s.address)}</div>
+${s.name ? `<div class="brand">${brand(s.name)}</div>` : ''}
+${s.tagline ? `<div class="tagline">${esc(String(s.tagline).toUpperCase())}</div>` : ''}
+${s.phones ? `<div class="contact">Mob: ${esc(s.phones)}</div>` : ''}
+${s.address ? `<div class="addr">${esc(s.address)}</div>` : ''}
 <div class="meta"><span>${fin ? 'Bill No.' : 'Sl. No.'} <span class="hand">${esc(fin ? p.billNo || p.serial : p.serial)}</span></span><span>Date <span class="hand">${esc(dmy(fin ? p.billDate : p.receiptDate))}</span></span></div>
 <div class="box"><span class="lbl">BOOKING DETAILS</span>
 ${ln('Name', p.customerName)}${ln('Father’s Name', p.fatherName)}${ln('Mob No.', p.mobile, 'Booking Dt.', dmy(p.bookingDate))}
@@ -76,7 +76,7 @@ ${received > 0 ? `<tr><td>RECEIVED</td><td class="v">${rs(received)}</td></tr>` 
 <table class="svc"><tbody>${svcs.map((x) => `<tr><td>${esc(x)}</td><td class="c">${(p.services || []).includes(x) ? '✓' : '✗'}</td></tr>`).join('')}</tbody></table>
 </div>
 ${fin && m.balance <= 0 ? '<div class="stamp">— PAID IN FULL —</div>' : ''}
-<div class="rules"><h4>${esc(s.rulesTitle)}</h4><ol>${(s.rules || []).map((r) => `<li>${esc(r)}</li>`).join('')}</ol></div>
+${s.rulesTitle || (s.rules || []).length ? `<div class="rules">${s.rulesTitle ? `<h4>${esc(s.rulesTitle)}</h4>` : ''}<ol>${(s.rules || []).map((r) => `<li>${esc(r)}</li>`).join('')}</ol></div>` : ''}
 <div class="sig"><div><span class="hand">${esc(p.customerName)}</span><br>Party Signature</div><div>Auth. Signature</div></div>
 </div></body></html>`;
 }
@@ -84,7 +84,7 @@ ${fin && m.balance <= 0 ? '<div class="stamp">— PAID IN FULL —</div>' : ''}
 export function billText(p, s, ledger) {
   const m = projMoney(p, ledger), fin = p.status === 'final';
   const L = [
-    `${s.name.toUpperCase()} – ${s.tagline}`,
+    [String(s.name || '').toUpperCase(), s.tagline].filter(Boolean).join(' – ') || null,
     fin ? `FINAL BILL No. ${p.billNo || p.serial} | ${dmy(p.billDate)}` : `ORDER RECEIPT Sl. No. ${p.serial} | ${dmy(p.receiptDate)}`,
     '',
     `Name: ${p.customerName || ''}`,
@@ -101,6 +101,7 @@ export function billText(p, s, ledger) {
   if ((p.extras || []).length || m.disc) L.push(`Net amount: ${inr(m.net)}`);
   L.push(`Advance: ${inr(p.advance)}`);
   (p.payments || []).forEach((x) => L.push(`Received ${dmy(x.date)}: ${inr(x.amount)}`));
-  L.push(`*Balance: ${inr(m.balance)}*`, '', `Mob: ${s.phones}`);
+  L.push(`*Balance: ${inr(m.balance)}*`);
+  if (s.phones) L.push('', `Mob: ${s.phones}`);
   return L.filter((x) => x !== null).join('\n');
 }

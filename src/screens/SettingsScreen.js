@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Share, View } from 'react-native';
-import { Screen, Card, Field, FSec, Btn, T, toast } from '../components/ui';
+import { Screen, Card, Field, FSec, Btn, T, Chips, opts, toast } from '../components/ui';
 import { useStore } from '../store';
 
 const lines = (s) => String(s || '').split('\n').map((x) => x.trim()).filter(Boolean);
@@ -13,6 +13,7 @@ export default function SettingsScreen({ navigation }) {
     segments: settings.segments.join('\n'),
     roles: settings.roles.join('\n'),
     invCategories: (settings.invCategories || []).join('\n'),
+    expenseCategories: (settings.expenseCategories || []).join('\n'),
     rules: (settings.rules || []).join('\n'),
   });
   const [backup, setBackup] = useState('');
@@ -20,8 +21,8 @@ export default function SettingsScreen({ navigation }) {
 
   const onSave = () => {
     saveSettings({
-      name: f.name.trim() || 'Regal Music', tagline: f.tagline.trim(), phones: f.phones.trim(), address: f.address.trim(),
-      services: lines(f.services), segments: lines(f.segments), roles: lines(f.roles), invCategories: lines(f.invCategories),
+      name: f.name.trim(), tagline: f.tagline.trim(), phones: f.phones.trim(), address: f.address.trim(),
+      services: lines(f.services), segments: lines(f.segments), roles: lines(f.roles), invCategories: lines(f.invCategories), expenseCategories: lines(f.expenseCategories),
       rulesTitle: f.rulesTitle.trim(), rules: lines(f.rules),
     });
     toast('Business details saved');
@@ -30,6 +31,15 @@ export default function SettingsScreen({ navigation }) {
 
   return (
     <Screen>
+      <Card style={{ gap: 10 }}>
+        <T weight="800" size={17}>Appearance</T>
+        <Chips
+          options={opts([['light', 'Light'], ['dark', 'Dark'], ['system', 'Follow phone']])}
+          value={settings.theme || 'light'}
+          onChange={(v) => saveSettings({ theme: v })}
+        />
+      </Card>
+
       <Card style={{ gap: 14 }}>
         <Field label="Business name" value={f.name} onChangeText={set('name')} />
         <Field label="Tagline" value={f.tagline} onChangeText={set('tagline')} />
@@ -40,6 +50,7 @@ export default function SettingsScreen({ navigation }) {
         <Field label="Business segments" value={f.segments} onChangeText={set('segments')} multiline />
         <Field label="Staff roles" value={f.roles} onChangeText={set('roles')} multiline />
         <Field label="Stock categories" value={f.invCategories} onChangeText={set('invCategories')} multiline />
+        <Field label="Expense types" value={f.expenseCategories} onChangeText={set('expenseCategories')} multiline />
         <FSec>Bill rules</FSec>
         <Field label="Rules heading" value={f.rulesTitle} onChangeText={set('rulesTitle')} />
         <Field label="Rules printed on the bill (one per line)" value={f.rules} onChangeText={set('rules')} multiline />

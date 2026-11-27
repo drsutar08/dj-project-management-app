@@ -1,24 +1,46 @@
 import { useColorScheme } from 'react-native';
+import { useStore } from './store';
+
+// Lavender background, deep navy text, bright purple accent, and a set of
+// bold tile colours for the Home grid.
+const tiles = {
+  purple: '#7a3ff0',
+  green: '#16b57a',
+  blue: '#3a5ff0',
+  orange: '#f5a414',
+  pink: '#f04f7d',
+  violet: '#8b4ff2',
+};
 
 const light = {
-  bg: '#f3f1f6', surface: '#ffffff', surface2: '#f0edf4', line: '#e8e3ee',
-  fg: '#16111c', muted: '#7b7287', accent: '#ff8a00', accent2: '#ffb547', accentInk: '#1f1100',
-  ink: '#1c1325', ink2: '#2e1d40', inkFg: '#fbf7ff', inkMuted: 'rgba(251,247,255,0.62)',
-  plum: '#5b2d8a', good: '#12915a', warn: '#c27400', bad: '#d63a4a',
-  goodBg: '#e2f6ec', warnBg: '#fff1dc', badBg: '#fde7ea', plumBg: '#efe6f8',
+  // The screen itself is white, as in the design; cards lift off it with a soft purple shadow and hairline.
+  bg: '#ffffff', surface: '#ffffff', surface2: '#f4f2fc', line: '#ece8f8',
+  heroBg: '#f6f3ff', heroLine: '#e9e3ff',
+  fg: '#14113a', muted: '#6d698d', accent: '#5a2ee6', accent2: '#8c6bff', accentInk: '#ffffff',
+  ink: '#1c1452', ink2: '#2f1d8f', inkFg: '#ffffff', inkMuted: 'rgba(255,255,255,0.7)',
+  plum: '#4f2bd6', good: '#109a63', warn: '#d48300', bad: '#e0405a',
+  goodBg: '#dcf5ea', warnBg: '#fff1d6', badBg: '#fde5ea', plumBg: '#ebe6ff',
+  tabBg: '#ffffff', tiles,
   dark: false,
 };
 const dark = {
-  bg: '#0e0a12', surface: '#19131f', surface2: '#231b2b', line: '#2d2436',
-  fg: '#f5f0fa', muted: '#a297ae', accent: '#ffa024', accent2: '#ffc266', accentInk: '#1f1100',
-  ink: '#241832', ink2: '#3a2452', inkFg: '#fbf7ff', inkMuted: 'rgba(251,247,255,0.6)',
-  plum: '#cfa8f5', good: '#4fd494', warn: '#ffbe55', bad: '#ff7a86',
-  goodBg: '#11301f', warnBg: '#352611', badBg: '#3a161c', plumBg: '#2c1f3a',
+  bg: '#0c0a1e', surface: '#17142f', surface2: '#211d3f', line: '#2d2853',
+  heroBg: '#1d1940', heroLine: '#2f2a5c',
+  fg: '#f3f1ff', muted: '#a5a1c8', accent: '#8a6bff', accent2: '#b39dff', accentInk: '#ffffff',
+  ink: '#1c1550', ink2: '#2c1f7a', inkFg: '#ffffff', inkMuted: 'rgba(255,255,255,0.68)',
+  plum: '#b9a7ff', good: '#4fd494', warn: '#ffbe55', bad: '#ff7a8c',
+  goodBg: '#0f2e22', warnBg: '#34260f', badBg: '#3a1620', plumBg: '#2a2356',
+  tabBg: '#17142f', tiles,
   dark: true,
 };
 
+// Light unless the user picks otherwise in Settings: 'light' (default), 'dark', or 'system' to follow the phone.
 export function useTheme() {
-  return useColorScheme() === 'dark' ? dark : light;
+  const scheme = useColorScheme();
+  const mode = useStore()?.settings?.theme || 'light';
+  if (mode === 'dark') return dark;
+  if (mode === 'system') return scheme === 'dark' ? dark : light;
+  return light;
 }
 
 export const tone = (c, t) =>
@@ -30,9 +52,9 @@ export const tone = (c, t) =>
   })[t] || { bg: c.surface2, fg: c.fg };
 
 export const shadow = {
-  shadowColor: '#1c1325',
-  shadowOpacity: 0.07,
-  shadowRadius: 14,
+  shadowColor: '#2a1d7a',
+  shadowOpacity: 0.08,
+  shadowRadius: 16,
   shadowOffset: { width: 0, height: 6 },
   elevation: 2,
 };

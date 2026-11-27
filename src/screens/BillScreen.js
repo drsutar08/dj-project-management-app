@@ -39,14 +39,16 @@ function BillPreview({ p, settings, ledger }) {
   return (
     <View style={s.bill}>
       <Text style={s.tag}>{fin ? 'FINAL BILL' : 'ORDER RECEIPT'}</Text>
-      <Text style={s.brand}>
-        {[...String(settings.name).toUpperCase()].map((ch, i) => (
-          <Text key={i} style={{ color: ch === ' ' ? B.blue : cols[ci++ % cols.length] }}>{ch}</Text>
-        ))}
-      </Text>
-      <Text style={s.tagline}>{String(settings.tagline).toUpperCase()}</Text>
-      <Text style={s.contact}>Mob: {settings.phones}</Text>
-      <Text style={s.addr}>{String(settings.address).toUpperCase()}</Text>
+      {settings.name ? (
+        <Text style={s.brand}>
+          {[...String(settings.name).toUpperCase()].map((ch, i) => (
+            <Text key={i} style={{ color: ch === ' ' ? B.blue : cols[ci++ % cols.length] }}>{ch}</Text>
+          ))}
+        </Text>
+      ) : null}
+      {settings.tagline ? <Text style={s.tagline}>{String(settings.tagline).toUpperCase()}</Text> : null}
+      {settings.phones ? <Text style={s.contact}>Mob: {settings.phones}</Text> : null}
+      {settings.address ? <Text style={s.addr}>{String(settings.address).toUpperCase()}</Text> : null}
       <View style={s.meta}>
         <Text style={s.metaT}>{fin ? 'Bill No. ' : 'Sl. No. '}<Text style={s.hand}>{fin ? p.billNo || p.serial : p.serial}</Text></Text>
         <Text style={s.metaT}>Date <Text style={s.hand}>{dmy(fin ? p.billDate : p.receiptDate)}</Text></Text>
@@ -75,7 +77,7 @@ function BillPreview({ p, settings, ledger }) {
         </View>
       </View>
       {fin && m.balance <= 0 ? <Text style={s.stamp}>— PAID IN FULL —</Text> : null}
-      <Text style={s.rulesH}>{settings.rulesTitle}</Text>
+      {settings.rulesTitle ? <Text style={s.rulesH}>{settings.rulesTitle}</Text> : null}
       {(settings.rules || []).map((r, i) => <Text key={i} style={s.rule}>{i + 1}. {r}</Text>)}
       <View style={s.sig}>
         <View style={s.sigBox}><Text style={s.hand}>{p.customerName}</Text><Text style={s.sigT}>Party Signature</Text></View>

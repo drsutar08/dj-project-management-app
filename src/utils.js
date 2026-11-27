@@ -89,3 +89,70 @@ export function itemAvail(it, projects, date, exceptProjectId) {
 }
 export const isLow = (it) => n(it.minQty) > 0 && n(it.qty) - n(it.repair) <= n(it.minQty);
 export const qtyTxt = (q, unit) => (n(q) < 0 ? '-' : '') + group(Math.abs(n(q))) + (unit ? ' ' + unit : '');
+
+// ---------- Profit & loss ----------
+// Each booking's income and costs count on its programme date, so a booking's own
+// profit and the period totals always agree. Costs not tied to a booking count on their own date.
+
+const itemCost = (items, id) => n(((items || []).find((i) => i.id === id) || {}).cost);
+
+// d = { ledger, expenses, moves, items }
+export function bookingPL(p, d) {
+  const m = projMoney(p, d.ledger);
+  const cancelled = p.status === 'cancel';
+  const income = cancelled ? m.paid : m.net; // a cancelled booking keeps only what was paid
+  const expenseList = (d.expenses || []).filter((e) => e.projectId === p.id);
+  const expenses = expenseList.reduce((a, e) => a + n(e.amount), 0);
+  const stockUsed = (d.moves || [])
+    .filter((mv) => mv.projectId === p.id && mv.type === 'out')
+    .reduce((a, mv) => a + n(mv.qty) * itemCost(d.items, mv.itemId), 0);
+  const cost = m.labour + expenses + stockUsed;
+  return { income, wages: m.labour, expenses, expenseList, stockUsed, cost, profit: income - cost, cancelled };
+}
+
+// d = { projects, ledger, expenses, moves, items }; from/to are YYYY-MM-DD, inclusive.
+export function periodPL(d, from, to) {
+  const inR = (x) => !!x && x >= from && x <= to;
+  const ids = new Set((d.projects || []).map((p) => p.id));
+  const lines = {};
+  const add = (k, v) => { if (v) lines[k] = (lines[k] || 0) + v; };
+  let income = 0;
+  const bookings = [];
+  (d.projects || []).forEach((p) => {
+    if (!inR(p.bookingDate)) return;
+    const pl = bookingPL(p, d);
+    if (!pl.income && !pl.cost) return;
+    income += pl.income;
+    add('Staff wages', pl.wages);
+    pl.expenseList.forEach((e) => add(e.category || 'Other', n(e.amount)));
+    add('Stock used', pl.stockUsed);
+    bookings.push({ p, pl });
+  });
+  (d.ledger || []).forEach((l) => {
+    if (l.kind === 'earn' && !(l.projectId && ids.has(l.projectId)) && inR(l.date)) add('Staff wages', n(l.amount));
+  });
+  (d.expenses || []).forEach((e) => {
+    if (!(e.projectId && ids.has(e.projectId)) && inR(e.date)) add(e.category || 'Other', n(e.amount));
+  });
+  let stockBought = 0;
+  (d.moves || []).forEach((mv) => {
+    if (!inR(mv.date)) return;
+    if (mv.type === 'out' && !(mv.projectId && ids.has(mv.projectId))) add('Stock used', n(mv.qty) * itemCost(d.items, mv.itemId));
+    if (mv.type === 'repair') add('Repairs', n(mv.cost));
+    if (mv.type === 'in') stockBought += n(mv.cost);
+  });
+  const list = Object.entries(lines).sort((a, b) => b[1] - a[1]);
+  const cost = list.reduce((a, [, v]) => a + v, 0);
+  bookings.sort((a, b) => String(a.p.bookingDate).localeCompare(String(b.p.bookingDate)));
+  return { income, cost, profit: income - cost, lines: list, bookings, stockBought };
+}
+
+// Date helpers for the reports (all YYYY-MM-DD strings).
+const pad2 = (x) => String(x).padStart(2, '0');
+export const isoOf = (dt) => dt.getUTCFullYear() + '-' + pad2(dt.getUTCMonth() + 1) + '-' + pad2(dt.getUTCDate());
+export const addDays = (iso, k) => {
+  const [y, m, dd] = iso.split('-').map(Number);
+  return isoOf(new Date(Date.UTC(y, m - 1, dd + k)));
+};
+export const daysInMonth = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate(); // m is 1-12
+export const signed = (v) => (v < 0 ? '−' : v > 0 ? '+' : '') + inr(Math.abs(v));

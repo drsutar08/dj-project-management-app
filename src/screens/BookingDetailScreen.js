@@ -8,11 +8,11 @@ import { LedRow, MoveRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
 import { useTheme } from '../theme';
 import { MODES, STATUSES } from '../defaults';
-import { dmy, initials, inr, itemAvail, maskId, n, projMoney, qtyTxt, today } from '../utils';
+import { bookingPL, dmy, initials, inr, itemAvail, maskId, n, projMoney, qtyTxt, signed, today } from '../utils';
 
 export default function BookingDetailScreen({ navigation, route }) {
   const c = useTheme();
-  const { projects, settings, patchProject, items, addMove } = useStore();
+  const { projects, settings, patchProject, items, addMove, expenses, deleteExpense } = useStore();
   const { ledger, moves } = useSorted();
   const p = projects.find((x) => x.id === route.params.id);
   const [sheet, setSheet] = useState(null); // 'pay' | 'extra' | 'disc' | 'final' | 'gear'
@@ -79,6 +79,7 @@ export default function BookingDetailScreen({ navigation, route }) {
     })
     .filter(Boolean);
   const used = moves.filter((mv) => mv.projectId === p.id);
+  const pl = bookingPL(p, { ledger, expenses, moves, items });
   const pickIt = sheet === 'gear' ? items.find((x) => x.id === form.itemId) : null;
   let pickNote = '';
   if (pickIt && pickIt.kind === 'consumable') pickNote = qtyTxt(pickIt.qty, pickIt.unit) + ' in stock. This takes it out of stock now.';
@@ -151,11 +152,6 @@ export default function BookingDetailScreen({ navigation, route }) {
         {work.length ? <List>{work.map((l) => <LedRow key={l.id} l={l} />)}</List> : (
           <Empty title="No staff added yet" text="Add who worked this programme and their wage. It goes into each person’s pay ledger." />
         )}
-        <Card style={{ gap: 8 }}>
-          <MoneyRow label="Bill total" value={inr(m.net)} />
-          <MoneyRow label="Staff wages" value={'−' + inr(m.labour)} />
-          <MoneyRow total label="Margin" value={inr(m.profit)} color={m.profit >= 0 ? c.good : c.bad} />
-        </Card>
       </View>
 
       <View style={{ gap: 12 }}>
@@ -179,6 +175,20 @@ export default function BookingDetailScreen({ navigation, route }) {
         ) : (
           <Empty title="No equipment added" text="Reserve the speakers, lights and machines going to this programme, and record CO₂, paper and other stock used." />
         )}
+      </View>
+
+      <View style={{ gap: 12 }}>
+        <H2 right="+ Add expense" onRight={() => navigation.navigate('ExpenseForm', { projectId: p.id })}>Profit & loss</H2>
+        <Card style={{ gap: 8 }}>
+          <MoneyRow label={pl.cancelled ? 'Kept from customer' : 'Bill total'} value={inr(pl.income)} />
+          {pl.wages ? <MoneyRow label="− Staff wages" value={inr(pl.wages)} /> : null}
+          {pl.expenseList.map((e) => (
+            <MoneyRow key={e.id} label={'− ' + [e.category, e.note].filter(Boolean).join(' · ')} value={inr(e.amount)} onRemove={() => { deleteExpense(e.id); toast('Expense removed'); }} />
+          ))}
+          {pl.stockUsed ? <MoneyRow label="− Stock used" value={inr(pl.stockUsed)} /> : null}
+          <MoneyRow total label={pl.profit < 0 ? 'Loss' : 'Profit'} value={signed(pl.profit)} color={pl.profit < 0 ? c.bad : c.good} />
+          {!pl.cost ? <T muted size={12.5}>Add staff wages and expenses like diesel, transport and food to see the real profit.</T> : null}
+        </Card>
       </View>
 
       <View style={{ gap: 10 }}>

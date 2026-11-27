@@ -23,11 +23,12 @@ export function StoreProvider({ children }) {
             projects: d.projects || [],
             items: d.items || [],
             moves: d.moves || [],
+            expenses: d.expenses || [],
           });
           return;
         }
       } catch (e) {}
-      setState({ settings: { ...DEFAULT_SETTINGS }, items: [], moves: [], ...SEED });
+      setState({ settings: { ...DEFAULT_SETTINGS }, items: [], moves: [], expenses: [], ...SEED });
     })();
   }, []);
 
@@ -60,6 +61,8 @@ export function StoreProvider({ children }) {
       saveProject: upsert('projects'),
       patchProject: patch('projects'),
       deleteProject: remove('projects'),
+      saveExpense: upsert('expenses'),
+      deleteExpense: remove('expenses'),
       saveItem: upsert('items'),
       deleteItem: (id) =>
         setState((s) => ({
@@ -86,7 +89,7 @@ export function StoreProvider({ children }) {
       importData: (json) => {
         const d = JSON.parse(json);
         if (!d || !Array.isArray(d.projects) || !Array.isArray(d.employees) || !Array.isArray(d.ledger))
-          throw new Error('This is not a Regal Music backup.');
+          throw new Error('This is not a backup from this app.');
         setState({
           settings: { ...DEFAULT_SETTINGS, ...(d.settings || {}) },
           employees: d.employees,
@@ -94,6 +97,7 @@ export function StoreProvider({ children }) {
           projects: d.projects,
           items: d.items || [],
           moves: d.moves || [],
+          expenses: d.expenses || [],
         });
       },
     };
@@ -133,7 +137,8 @@ export function useSorted() {
       projects: [...s.projects].sort((a, b) => String(a.bookingDate).localeCompare(String(b.bookingDate))),
       items: [...s.items].sort((a, b) => String(a.category).localeCompare(String(b.category)) || String(a.name).localeCompare(String(b.name))),
       moves: [...s.moves].sort((a, b) => String(b.date).localeCompare(String(a.date)) || (b.ts || 0) - (a.ts || 0)),
+      expenses: [...s.expenses].sort((a, b) => String(b.date).localeCompare(String(a.date)) || (b.ts || 0) - (a.ts || 0)),
     }),
-    [s.employees, s.ledger, s.projects, s.items, s.moves]
+    [s.employees, s.ledger, s.projects, s.items, s.moves, s.expenses]
   );
 }

@@ -4,45 +4,87 @@ import { Screen, T, H2, List, Empty, Row, Tile } from '../components/ui';
 import { ProjRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
-import { MON, dmy, empMoney, initials, inr, isLow, isReadyToBill, n, projMoney, qtyTxt, today } from '../utils';
+import { MON, daysInMonth, dmy, empMoney, initials, inr, isLow, isReadyToBill, n, periodPL, projMoney, qtyTxt, signed, today } from '../utils';
 
-function Quick({ icon, label, onPress, bg, fg }) {
+// White card with an illustration on the left and a round arrow button on the right.
+function HeroCard({ icon, title, sub, note, onPress, children }) {
   const c = useTheme();
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1, backgroundColor: c.surface, borderRadius: 18, paddingVertical: 14, alignItems: 'center', gap: 8, transform: [{ scale: pressed ? 0.97 : 1 }] }, shadow]}>
-      <View style={{ width: 42, height: 42, borderRadius: 14, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
-        <T size={20} weight="800" color={fg}>{icon}</T>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        { backgroundColor: c.heroBg, borderWidth: 1, borderColor: c.heroLine, borderRadius: 24, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, transform: [{ scale: pressed ? 0.99 : 1 }] },
+        shadow,
+      ]}
+    >
+      <View style={{ width: 76, height: 76, borderRadius: 20, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <View style={{ position: 'absolute', width: 60, height: 60, borderRadius: 30, backgroundColor: c.accent2, opacity: 0.25, right: -18, bottom: -18 }} />
+        <T size={34} weight="800" color={c.accent}>{icon}</T>
       </View>
-      <T weight="700" size={12.5}>{label}</T>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <T size={16} weight="800" numberOfLines={1}>{title}</T>
+        {sub ? <T size={13} muted style={{ marginTop: 2 }} numberOfLines={2}>{sub}</T> : null}
+        {children}
+        {note ? <T size={12} weight="700" color={c.plum} style={{ marginTop: 6 }}>{note}</T> : null}
+      </View>
+      <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' }}>
+        <T size={18} weight="800" color={c.accentInk}>›</T>
+      </View>
     </Pressable>
   );
 }
 
-function Kpi({ label, value, sub, bg, fg, icon }) {
-  const c = useTheme();
+// Coloured tile: icon box top-left, arrow top-right, title + subtitle, big faded symbol in the corner.
+function ActionTile({ color, icon, title, sub, badge, onPress }) {
   return (
-    <View style={[{ flex: 1, backgroundColor: c.surface, borderRadius: 20, padding: 14 }, shadow]}>
-      <View style={{ width: 34, height: 34, borderRadius: 12, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-        <T weight="800" color={fg}>{icon}</T>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        { flexGrow: 1, flexBasis: '46%', minHeight: 150, backgroundColor: color, borderRadius: 22, padding: 14, overflow: 'hidden', transform: [{ scale: pressed ? 0.97 : 1 }] },
+        shadow,
+        { shadowColor: color, shadowOpacity: 0.3 },
+      ]}
+    >
+      <T size={86} weight="800" color="#ffffff" style={{ position: 'absolute', right: -6, bottom: -22, opacity: 0.16 }}>{icon}</T>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <View style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' }}>
+          <T size={19} weight="800" color="#ffffff">{icon}</T>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {badge ? (
+            <View style={{ backgroundColor: '#e8243f', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3 }}>
+              <T size={10} weight="800" color="#ffffff" style={{ letterSpacing: 0.4 }}>{badge}</T>
+            </View>
+          ) : null}
+          <View style={{ width: 28, height: 28, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' }}>
+            <T size={14} weight="800" color="#ffffff">↗</T>
+          </View>
+        </View>
       </View>
-      <T muted size={12} weight="600">{label}</T>
-      <T size={21} weight="800" style={{ letterSpacing: -0.5 }}>{value}</T>
-      <T muted size={12}>{sub}</T>
-    </View>
+      <View style={{ flex: 1 }} />
+      <T size={16.5} weight="800" color="#ffffff" style={{ marginTop: 18 }}>{title}</T>
+      {sub ? <T size={12.5} weight="600" color="rgba(255,255,255,0.85)" numberOfLines={1} style={{ marginTop: 2 }}>{sub}</T> : null}
+    </Pressable>
   );
 }
 
 export default function HomeScreen({ navigation }) {
   const c = useTheme();
-  const { settings, ledger, employees, items } = useStore();
+  const { settings, ledger, employees, items, expenses, moves } = useStore();
   const { projects } = useSorted();
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: settings.name,
+      title: settings.name || 'Home',
+      headerTitleStyle: { fontWeight: '800', fontSize: 24, color: c.fg },
       headerRight: () => (
-        <Pressable onPress={() => navigation.navigate('Settings')} hitSlop={10} style={{ marginRight: 16, backgroundColor: c.surface, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 }}>
-          <T weight="700" size={13}>Settings</T>
+        <Pressable
+          onPress={() => navigation.navigate('Settings')}
+          hitSlop={10}
+          accessibilityLabel="Business details and settings"
+          style={{ marginRight: 16, width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <T size={24} weight="700">☰</T>
         </Pressable>
       ),
     });
@@ -57,34 +99,71 @@ export default function HomeScreen({ navigation }) {
   const toBill = projects.filter(isReadyToBill);
   const open = (p) => navigation.navigate('Booking', { id: p.id });
   const low = items.filter(isLow);
+  const billed = projects.filter((p) => p.status === 'final').length;
+  const [yy, mm] = td.split('-').map(Number);
+  const monthPL = periodPL({ projects, ledger, expenses, moves, items }, ym + '-01', ym + '-' + daysInMonth(yy, mm));
 
   return (
     <Screen>
-      <View style={{ backgroundColor: c.ink2, borderRadius: 26, padding: 20, overflow: 'hidden' }}>
-        <View style={{ position: 'absolute', width: 260, height: 260, borderRadius: 130, right: -90, top: -120, backgroundColor: c.accent, opacity: 0.35 }} />
-        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, right: -40, bottom: -130, backgroundColor: '#b27cff', opacity: 0.22 }} />
-        <T color={c.inkMuted} weight="600" size={13}>Customers owe you</T>
-        <T color={c.inkFg} weight="800" size={38} style={{ letterSpacing: -1.2, marginTop: 4 }}>{inr(custDue)}</T>
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
-          {[['Staff to be paid', inr(staffDue)], [MON[new Date().getMonth()] + ' bookings', inr(monthRev)]].map(([l, v]) => (
-            <View key={l} style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderRadius: 16, padding: 12 }}>
-              <T color={c.inkMuted} size={11.5} weight="600">{l}</T>
-              <T color={c.inkFg} size={17} weight="800">{v}</T>
-            </View>
-          ))}
+      {!settings.name ? (
+        <HeroCard
+          icon="♫"
+          title="Set up your business"
+          sub="Add your name, phone numbers, address and bill rules"
+          note="⚡ Takes about 2 minutes"
+          onPress={() => navigation.navigate('Settings')}
+        />
+      ) : null}
+
+      <HeroCard icon="₹" title="Customers owe you" onPress={() => navigation.navigate('Payments')}>
+        <T size={28} weight="800" style={{ letterSpacing: -0.8, marginTop: 2 }}>{inr(custDue)}</T>
+        <T size={12.5} muted numberOfLines={1}>
+          Staff to pay {inr(staffDue)} · {MON[new Date().getMonth()]} {inr(monthRev)}
+        </T>
+      </HeroCard>
+
+      <View style={{ gap: 12 }}>
+        <T size={17} weight="800" style={{ letterSpacing: -0.3 }}>What do you want to do?</T>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          <ActionTile color={c.tiles.purple} icon="+" title="New booking" sub="Customer, date & advance" onPress={() => navigation.navigate('BookingForm')} />
+          <ActionTile
+            color={c.tiles.green}
+            icon="▦"
+            title="Bookings"
+            sub={up.length ? `${up.length} upcoming · next ${dmy(up[0].bookingDate)}` : 'No upcoming programmes'}
+            onPress={() => navigation.navigate('Bookings')}
+          />
+          <ActionTile
+            color={c.tiles.blue}
+            icon="☺"
+            title="Staff & pay"
+            sub={staffDue ? inr(staffDue) + ' to pay' : employees.length + ' staff · all settled'}
+            onPress={() => navigation.navigate('Staff')}
+          />
+          <ActionTile
+            color={c.tiles.orange}
+            icon="▤"
+            title="Stock"
+            sub={items.length ? `${items.length} items${low.length ? ` · ${low.length} low` : ''}` : 'Bass, line array, cords…'}
+            badge={low.length ? 'LOW' : ''}
+            onPress={() => navigation.navigate('Stock')}
+          />
+          <ActionTile
+            color={c.tiles.pink}
+            icon="≣"
+            title="Bills"
+            sub={toBill.length ? `${toBill.length} ready to bill` : `${billed} billed`}
+            badge={toBill.length ? 'DUE' : ''}
+            onPress={() => navigation.navigate('Bills')}
+          />
+          <ActionTile
+            color={c.tiles.violet}
+            icon="↗"
+            title="Profit & loss"
+            sub={MON[mm - 1] + ': ' + (monthPL.profit < 0 ? 'loss ' : 'profit ') + signed(monthPL.profit).replace(/^[+−]/, '')}
+            onPress={() => navigation.navigate('Reports')}
+          />
         </View>
-      </View>
-
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Quick icon="+" label="New booking" bg={c.accent} fg={c.accentInk} onPress={() => navigation.navigate('BookingForm')} />
-        <Quick icon="₹" label="Pay staff" bg={c.goodBg} fg={c.good} onPress={() => navigation.navigate('LedgerForm', { kind: 'pay' })} />
-        <Quick icon="☺" label="Add staff" bg={c.plumBg} fg={c.plum} onPress={() => navigation.navigate('StaffForm')} />
-        <Quick icon="▤" label="Stock" bg={low.length ? c.badBg : c.warnBg} fg={low.length ? c.bad : c.warn} onPress={() => navigation.navigate('Stock')} />
-      </View>
-
-      <View style={{ flexDirection: 'row', gap: 12 }}>
-        <Kpi icon="▦" bg={c.plumBg} fg={c.plum} label="Upcoming" value={String(up.length)} sub={up[0] ? 'Next ' + dmy(up[0].bookingDate) : 'None scheduled'} />
-        <Kpi icon="≣" bg={c.warnBg} fg={c.warn} label="Ready to bill" value={String(toBill.length)} sub="Programmes done" />
       </View>
 
       {toBill.length ? (

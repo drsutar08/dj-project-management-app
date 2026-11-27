@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Row, Tile, Pill, RemoveBtn } from './ui';
 import { useTheme } from '../theme';
 import { useStore } from '../store';
-import { MOVE_TYPES, STATUSES } from '../defaults';
+import { MOVE_TYPES, STATUSES, specSummary } from '../defaults';
 import { dmy, dparts, empMoney, initials, inr, isLow, n, projMoney, qtyTxt } from '../utils';
 
 export function ProjRow({ p, onPress }) {
@@ -85,7 +85,7 @@ export function ItemRow({ it, onPress }) {
       onPress={onPress}
       left={<Tile top={initials(it.name)} t={low ? 'bad' : consumable ? 'warn' : 'plum'} />}
       title={it.name}
-      sub={[it.category, consumable ? 'Consumable' : '', n(it.repair) ? n(it.repair) + ' in repair' : ''].filter(Boolean).join(' · ')}
+      sub={[specSummary(it) || it.category, consumable ? 'Consumable' : '', n(it.repair) ? n(it.repair) + ' in repair' : ''].filter(Boolean).join(' · ')}
       right={qtyTxt(usable, it.unit)}
       rightColor={low ? c.bad : undefined}
       rightSub={low ? <View style={{ marginTop: 3 }}><Pill label="Low stock" t="bad" /></View> : consumable ? 'in stock' : 'usable'}

@@ -21,7 +21,7 @@ export default function InventoryScreen({ navigation }) {
       <Screen>
         <Empty
           title="No stock items yet"
-          text="Add your speakers, lights, mixers, Sharpy and effect machines, and consumables like CO₂, paper spray and cold fire refills."
+          text="Add your bass, line array, tops, amplifiers, mixers, cords, lights and effect machines, and consumables like CO₂, paper spray and cold fire powder."
           action="+ Add item"
           onAction={() => navigation.navigate('ItemForm')}
         />
@@ -37,7 +37,7 @@ export default function InventoryScreen({ navigation }) {
   const list = items.filter(
     (it) =>
       (!cat || (cat === '__low' ? isLow(it) : it.category === cat)) &&
-      (!qq || [it.name, it.category, it.notes].join(' ').toLowerCase().includes(qq))
+      (!qq || [it.name, it.category, it.brand, it.notes, ...Object.values(it.specs || {})].join(' ').toLowerCase().includes(qq))
   );
 
   return (
@@ -47,7 +47,7 @@ export default function InventoryScreen({ navigation }) {
         onChangeText={setQ}
         placeholder="Search stock"
         placeholderTextColor={c.muted}
-        style={[{ backgroundColor: c.surface, color: c.fg, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 15 }, shadow]}
+        style={[{ backgroundColor: c.surface2, color: c.fg, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 15 }, shadow]}
       />
       <Card style={{ gap: 8 }}>
         <MoneyRow label="Items" value={String(items.length)} />

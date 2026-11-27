@@ -34,7 +34,7 @@ export default function StaffScreen({ navigation }) {
         onChangeText={setQ}
         placeholder="Search staff"
         placeholderTextColor={c.muted}
-        style={[{ backgroundColor: c.surface, color: c.fg, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 15 }, shadow]}
+        style={[{ backgroundColor: c.surface2, color: c.fg, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 15 }, shadow]}
       />
       <Card><MoneyRow label="Total wages to pay" value={inr(due)} color={due > 0 ? c.bad : undefined} /></Card>
       {list.length ? (

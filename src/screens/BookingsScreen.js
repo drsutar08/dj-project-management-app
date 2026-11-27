@@ -44,7 +44,7 @@ export default function BookingsScreen({ navigation }) {
         onChangeText={setQ}
         placeholder="Search name, mobile, village, Sl. No."
         placeholderTextColor={c.muted}
-        style={[{ backgroundColor: c.surface, color: c.fg, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 15 }, shadow]}
+        style={[{ backgroundColor: c.surface2, color: c.fg, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 15 }, shadow]}
       />
       <Chips scroll options={FILTERS} value={f} onChange={setF} />
       {list.length ? (

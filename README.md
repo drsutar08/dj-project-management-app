@@ -8,6 +8,7 @@ A phone app for Regal Music to manage:
 - **Customer payments**: extra charges, discount, payments received, balance, and margin after staff wages.
 - **Stock / inventory**: equipment (speakers, lights, mixers, effect machines) and consumables (CO₂, paper spray, cold fire refills) with quantity, unit, category, cost and a low-stock alert. Record stock in, used / out, sent for repair, back from repair, and count corrections; every change is kept in the item's history.
 - **Equipment on bookings**: reserve equipment for a programme and see if you are short that day; consumables used on a programme come out of stock.
+- **Profit & loss**: each booking shows its income, staff wages, expenses (diesel, transport, food, gear rent…) and stock used, with the profit or loss. The Profit & loss report shows the same by day, month or year, with a profit chart, where the money went, and every booking in that period. General costs like shop rent can be added without a booking.
 - **Final bill**: "Finalise & create bill" makes a bill in the Regal Music receipt layout, which you can share as a PDF (WhatsApp, email), print, or send as text.
 - **Settings**: business name, phones, address, effects list, segments, staff roles and the Odia rules printed on the bill, plus backup and restore.
 

@@ -55,7 +55,7 @@ export function LinkBtn({ children, onPress }) {
 
 export function Card({ children, style }) {
   const c = useTheme();
-  return <View style={[{ backgroundColor: c.surface, borderRadius: 20, padding: 16 }, shadow, style]}>{children}</View>;
+  return <View style={[{ backgroundColor: c.surface, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: c.line }, shadow, style]}>{children}</View>;
 }
 
 export function Btn({ title, onPress, variant = 'primary', style, disabled }) {
@@ -111,7 +111,7 @@ export function List({ children }) {
   const c = useTheme();
   const items = React.Children.toArray(children).filter(Boolean);
   return (
-    <View style={[{ backgroundColor: c.surface, borderRadius: 20, paddingVertical: 4, overflow: 'hidden' }, shadow]}>
+    <View style={[{ backgroundColor: c.surface, borderRadius: 20, paddingVertical: 4, overflow: 'hidden', borderWidth: 1, borderColor: c.line }, shadow]}>
       {items.map((ch, i) => (
         <View key={i}>
           {i > 0 && <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.line, marginLeft: 72, marginRight: 14 }} />}
@@ -245,7 +245,7 @@ export function Chips({ options, value, onChange, multi, scroll }) {
         }}
         style={{
           borderRadius: multi ? 12 : 99, paddingHorizontal: 14, paddingVertical: 9,
-          backgroundColor: on ? (multi ? c.warnBg : c.fg) : c.surface2,
+          backgroundColor: on ? (multi ? c.plumBg : c.fg) : c.surface2,
           borderWidth: 1.5, borderColor: on && multi ? c.accent : 'transparent',
         }}
       >
@@ -290,6 +290,11 @@ export function Field({ label, value, onChangeText, required, multiline, keyboar
   );
 }
 
+function DateHint() {
+  const c = useTheme();
+  return <T size={12} color={c.bad}>Write the date like 15.2.2027</T>;
+}
+
 // Date field: type 15.2.2027, stored as 2027-02-15.
 export function DateField({ label, value, onChange, required }) {
   const [txt, setTxt] = useState(dmy(value));
@@ -308,7 +313,7 @@ export function DateField({ label, value, onChange, required }) {
           if (p !== null) onChange(p);
         }}
       />
-      {parsed === null ? <T size={12} color="#d63a4a">Write the date like 15.2.2027</T> : null}
+      {parsed === null ? <DateHint /> : null}
     </View>
   );
 }

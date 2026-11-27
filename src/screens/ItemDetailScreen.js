@@ -5,6 +5,7 @@ import { MoveRow, ProjRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
 import { dmy, inr, isLow, n, qtyTxt, today } from '../utils';
+import { SPEC_FIELDS, specKeysFor } from '../defaults';
 
 const TITLES = {
   in: 'Stock in (bought / added)',
@@ -97,6 +98,10 @@ export default function ItemDetailScreen({ navigation, route }) {
           rows={[
             ['Type', consumable ? 'Consumable' : 'Equipment'],
             ['Category', it.category],
+            ...specKeysFor(it.category).map((k) => [
+              SPEC_FIELDS[k].label.replace(/ \(.*\)$/, ''),
+              it.specs && String(it.specs[k] || '').trim() ? String(it.specs[k]).trim() + (SPEC_FIELDS[k].suffix || '') : '',
+            ]),
             ['Brand / model', it.brand],
             ['Serial No.', it.serialNo],
             ['Cost per unit', it.cost ? inr(it.cost) : ''],
