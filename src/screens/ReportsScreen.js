@@ -4,6 +4,8 @@ import { Screen, Card, T, H2, List, Row, Tile, Empty, MoneyRow, Chips, opts, Lin
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
 import { MON, addDays, daysInMonth, dmy, dparts, inr, periodPL, signed, today } from '../utils';
+import { exportPeriod } from '../exportXlsx';
+import { Btn } from '../components/ui';
 
 const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -157,6 +159,8 @@ export default function ReportsScreen({ navigation }) {
           />
         </Card>
       ) : null}
+
+      <Btn variant="secondary" title={'Export ' + r.label + ' to Excel'} onPress={() => exportPeriod({ ...d, employees: store.employees }, store.settings, r.from, r.to, r.label)} />
 
       <View style={{ gap: 12 }}>
         <H2>Where the money went</H2>

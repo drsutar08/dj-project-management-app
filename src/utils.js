@@ -199,3 +199,66 @@ export const textToUnits = (t) => {
   });
   return out;
 };
+
+// Aadhaar as printed on bills and receipts: full, or only the last 4 digits when masking is on.
+export const aadhaarForBill = (v, settings) => {
+  const d = String(v || '').replace(/\s/g, '');
+  if (!d) return '';
+  if (!(settings && settings.maskAadhaar)) return String(v);
+  return 'XXXX XXXX ' + d.slice(-4);
+};
+
+// ---------- Calendar & clashes ----------
+// Other active bookings on the same date and shift (Day/Night). A booking with no shift
+// set clashes with either shift, to be safe.
+export function clashesFor(projects, p) {
+  if (!p || !p.bookingDate) return [];
+  return (projects || []).filter(
+    (x) => x.id !== p.id && x.status !== 'cancel' && x.bookingDate === p.bookingDate && (!x.shift || !p.shift || x.shift === p.shift)
+  );
+}
+
+// ---------- Customers (worked out from bookings) ----------
+const digits = (v) => String(v || '').replace(/\D/g, '');
+// Customers are matched by the last 10 digits of their mobile, or by name when there is no mobile.
+export const customerKey = (p) => {
+  const d = digits(p.mobile);
+  return d.length >= 10 ? 'm' + d.slice(-10) : 'n' + String(p.customerName || '').trim().toLowerCase();
+};
+
+export function customersOf(projects, ledger) {
+  const map = {};
+  [...(projects || [])]
+    .sort((a, b) => String(a.bookingDate).localeCompare(String(b.bookingDate)))
+    .forEach((p) => {
+      if (!String(p.customerName || '').trim() && !digits(p.mobile)) return;
+      const k = customerKey(p);
+      const c = map[k] || (map[k] = { key: k, bookings: [], spent: 0, paid: 0, due: 0 });
+      // Latest booking wins for the details, but never blanks out something known.
+      ['customerName', 'fatherName', 'mobile', 'address', 'aadhaar', 'pan', 'age'].forEach((f) => { if (p[f]) c[f] = p[f]; });
+      c.bookings.push(p);
+      if (p.status !== 'cancel') {
+        const m = projMoney(p, ledger);
+        c.spent += m.net;
+        c.paid += m.paid;
+        c.due += Math.max(0, m.balance);
+      }
+      c.last = p.bookingDate;
+    });
+  return Object.values(map).sort((a, b) => String(b.last).localeCompare(String(a.last)));
+}
+
+// Day and Night slots on a date: who has each one. A booking without a shift holds both.
+export function slotsOn(projects, date, exceptId) {
+  const s = { Day: [], Night: [] };
+  if (!date) return s;
+  (projects || []).forEach((x) => {
+    if (x.id === exceptId || x.status === 'cancel' || x.bookingDate !== date) return;
+    if (x.shift === 'Day' || !x.shift) s.Day.push(x);
+    if (x.shift === 'Night' || !x.shift) s.Night.push(x);
+  });
+  return s;
+}
+
+// All contact numbers on a booking: the main mobile first, then any others.
+export const allMobiles = (p) => [p && p.mobile, ...((p && p.altMobiles) || [])].map((x) => String(x || '').trim()).filter(Boolean);

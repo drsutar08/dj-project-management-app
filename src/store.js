@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEFAULT_SETTINGS, SEED } from './defaults';
 import { n, uid } from './utils';
+import { setLang } from './i18n';
 
 const KEY = 'regal-music-manager.v1';
 const Ctx = createContext(null);
@@ -32,12 +33,18 @@ export function StoreProvider({ children }) {
     })();
   }, []);
 
+  // Keep the language used by messages outside screens (toasts) in step with Settings.
+  useEffect(() => { if (state) setLang(state.settings.lang); }, [state && state.settings.lang]);
+
   // Save shortly after every change.
   useEffect(() => {
     if (!state) return;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {});
+      AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {
+        // Loaded here, not at the top, so the store and the UI module don't import each other.
+        require('./components/ui').toast('Couldn’t save. The phone storage may be full. Remove some documents or send a backup.');
+      });
     }, 250);
   }, [state]);
 

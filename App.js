@@ -7,7 +7,9 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { StatusBar } from 'expo-status-bar';
 import { StoreProvider } from './src/store';
 import { useTheme, shadow } from './src/theme';
-import { ToastHost, Icon } from './src/components/ui';
+import { ToastHost, Icon, T, useLang } from './src/components/ui';
+import { tr } from './src/i18n';
+import { LockGate } from './src/lock';
 
 import HomeScreen from './src/screens/HomeScreen';
 import BookingsScreen from './src/screens/BookingsScreen';
@@ -26,6 +28,10 @@ import ItemDetailScreen from './src/screens/ItemDetailScreen';
 import ItemFormScreen from './src/screens/ItemFormScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
 import ExpenseFormScreen from './src/screens/ExpenseFormScreen';
+import CalendarScreen from './src/screens/CalendarScreen';
+import CustomersScreen from './src/screens/CustomersScreen';
+import CustomerScreen from './src/screens/CustomerScreen';
+import PaymentReceiptScreen from './src/screens/PaymentReceiptScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -36,6 +42,7 @@ const TAB_ICONS = { Home: 'home', Bookings: 'calendar', Staff: 'people', Payment
 // White bar docked to the bottom; the open tab is shown in the accent colour.
 function TabBar({ state, descriptors, navigation }) {
   const c = useTheme();
+  const lang = useLang();
   const insets = useSafeAreaInsets();
   return (
     <View
@@ -52,7 +59,7 @@ function TabBar({ state, descriptors, navigation }) {
       {state.routes.map((route, i) => {
         const focused = state.index === i;
         // Tab names stay fixed even when a screen changes its header title (Home shows the business name).
-        const label = descriptors[route.key].options.tabBarLabel || route.name;
+        const label = tr(descriptors[route.key].options.tabBarLabel || route.name, lang);
         return (
           <Pressable
             key={route.key}
@@ -82,6 +89,7 @@ function Tabs() {
     headerShadowVisible: false,
     headerTitleStyle: { fontWeight: '800', fontSize: 22, color: c.fg },
     headerTitleAlign: 'left',
+    headerTitle: ({ children }) => <T weight="800" size={22} numberOfLines={1}>{children}</T>,
   };
   return (
     <Tab.Navigator tabBar={(p) => <TabBar {...p} />} screenOptions={header}>
@@ -104,6 +112,8 @@ function Root() {
     headerTintColor: c.fg,
     headerTitleStyle: { fontWeight: '800', color: c.fg },
     headerBackTitle: 'Back',
+    // Header titles go through <T> so they follow the app language.
+    headerTitle: ({ children }) => <T weight="800" size={18} numberOfLines={1}>{children}</T>,
   };
   return (
     <NavigationContainer theme={navTheme}>
@@ -117,6 +127,10 @@ function Root() {
         <Stack.Screen name="LedgerForm" component={LedgerFormScreen} options={{ presentation: 'modal', title: 'Payment' }} />
         <Stack.Screen name="Bill" component={BillScreen} />
         <Stack.Screen name="Stock" component={InventoryScreen} />
+        <Stack.Screen name="Calendar" component={CalendarScreen} />
+        <Stack.Screen name="Customers" component={CustomersScreen} />
+        <Stack.Screen name="Customer" component={CustomerScreen} options={{ title: 'Customer' }} />
+        <Stack.Screen name="PaymentReceipt" component={PaymentReceiptScreen} options={{ title: 'Payment receipt' }} />
         <Stack.Screen name="Reports" component={ReportsScreen} options={{ title: 'Profit & loss' }} />
         <Stack.Screen name="ExpenseForm" component={ExpenseFormScreen} options={{ presentation: 'modal', title: 'Expense' }} />
         <Stack.Screen name="Item" component={ItemDetailScreen} options={{ title: 'Stock item' }} />
@@ -132,7 +146,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StoreProvider>
-        <Root />
+        <LockGate>
+          <Root />
+        </LockGate>
       </StoreProvider>
     </SafeAreaProvider>
   );

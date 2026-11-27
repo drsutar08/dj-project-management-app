@@ -1,4 +1,5 @@
-import { dayName, dmy, inr, n, projMoney, qtyLabel, setupLines, withUnit } from './utils';
+import { aadhaarForBill, allMobiles, dayName, dmy, inr, n, projMoney, qtyLabel, setupLines, withUnit } from './utils';
+import { qrSvg, showUpi, upiLink } from './upi';
 
 const esc = (v) =>
   String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -116,6 +117,11 @@ h3:first-child{margin-top:0}
 .desc .c.off{color:${DOC.muted}}
 .desc .c.off b,.desc .c.off .ic{color:#b9b6cc}
 .desc .c .ic{color:${DOC.accent}}
+.upi{display:flex;align-items:center;gap:16px;margin-top:10px;border:1px solid ${DOC.line};background:${DOC.tint};border-radius:14px;padding:10px 14px}
+.upi svg{flex:none;border-radius:6px}
+.upi h4{margin:0;color:${DOC.deep};font-size:15px;font-weight:900}
+.upi p{margin:2px 0 0;color:${DOC.muted};font-size:12px;font-weight:600}
+.upi b{display:block;margin-top:4px;color:${DOC.ink};font-size:13.5px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{display:inline-flex;align-items:center;gap:4px;border-radius:99px;padding:4px 11px;font-size:12px;font-weight:800;border:1px solid #f4f4f7;background:#f4f4f7;color:${DOC.muted}}
 .chip.on{background:${DOC.tint};border-color:${DOC.accentSoft};color:${DOC.accent}}
@@ -170,7 +176,7 @@ export function billHTML(p, settings, ledger) {
   const s = settings, m = projMoney(p, ledger), fin = p.status === 'final';
   const received = m.paid - n(p.advance);
   const paid = m.balance <= 0;
-  const time = [p.startTime, p.endTime].filter(Boolean).join(' – ') + (p.shift ? ` (${p.shift})` : '');
+  const time = ([p.startTime, p.endTime].filter(Boolean).join(' – ') + (p.shift ? ` (${p.shift})` : '')).trim();
   // Only an uploaded image (data URL) is allowed as the signature.
   const sigImg = /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(String(s.signature || '')) ? s.signature : '';
   const field = (label, value, wide) => (value ? `<div${wide ? ' class="wide"' : ''}><small>${label}</small><b>${esc(value)}</b></div>` : '');
@@ -193,12 +199,12 @@ export function billHTML(p, settings, ledger) {
   <h3>BOOKING DETAILS</h3>
   <div class="grid">
     ${field('Name', p.customerName)}${field('Age', p.age ? String(p.age) : '')}
-    ${field('Father’s name', p.fatherName)}${field('Mobile', p.mobile)}
+    ${field('Father’s name', p.fatherName)}${field('Mobile', allMobiles(p).join(', '))}
     ${field('Address', p.address, true)}
     ${field('Programme date', [dmy(p.bookingDate), dayName(p.bookingDate)].filter(Boolean).join(', '))}${field('Time', time)}
     ${field('Programme', [p.segment, p.eventType].filter(Boolean).join(' · '))}${field('Type', p.programmeType)}
     ${field('From → To', [p.from, p.to].filter(Boolean).join(' → '), true)}
-    ${field('Aadhaar No.', p.aadhaar)}${field('PAN', p.pan)}
+    ${field('Aadhaar No.', aadhaarForBill(p.aadhaar, s))}${field('PAN', p.pan)}
   </div>
   <h3>PAYMENT</h3>
   <div class="amts">
@@ -210,6 +216,7 @@ export function billHTML(p, settings, ledger) {
     ${received > 0 ? row('Received', received, 'minus') : ''}
   </div>
   <div class="bal${paid ? ' paid' : ''}"><span>${paid ? 'PAID IN FULL' : 'BALANCE DUE'}</span><b>${inr(Math.max(0, m.balance))}</b></div>
+  ${showUpi(s, m.balance) ? `<div class="upi">${qrSvg(upiLink(s, m.balance, 'Sl ' + p.serial + ' ' + (p.customerName || '')), 112)}<div><h4>Scan to pay ${inr(m.balance)}</h4><p>Any UPI app: GPay, PhonePe, Paytm, BHIM</p><b>${esc(s.upiId)}</b>${s.upiName ? `<p>${esc(s.upiName)}</p>` : ''}</div></div>` : ''}
   ${descHTML(p, s)}
   ${s.rulesTitle || (s.rules || []).length ? `<div class="rules">${s.rulesTitle ? `<h4>${esc(s.rulesTitle)}</h4>` : ''}<ol>${(s.rules || []).map((r) => `<li>${esc(r)}</li>`).join('')}</ol></div>` : ''}
   <div class="sig"><div><div class="top"><i>${esc(p.customerName || '')}</i></div><span>Customer signature</span></div><div><div class="top">${sigImg ? `<img src="${esc(sigImg)}" alt="Authorised signature">` : ''}</div><span>${esc(s.signTitle || 'Authorised signature')}</span>${s.signName ? `<em>${esc(s.signName)}</em>` : ''}</div></div>
@@ -229,7 +236,7 @@ export function billText(p, s, ledger) {
     p.age ? `Age: ${p.age}` : null,
     p.fatherName ? `Father: ${p.fatherName}` : null,
     p.address ? `Address: ${p.address}` : null,
-    `Mobile: ${p.mobile || ''}`,
+    `Mobile: ${allMobiles(p).join(', ')}`,
     `Programme: ${dmy(p.bookingDate)}${dayName(p.bookingDate) ? ' ' + dayName(p.bookingDate) : ''} ${[p.startTime, p.endTime].filter(Boolean).join('–')}${p.shift ? ' (' + p.shift + ')' : ''}`,
     p.programmeType ? `Type: ${p.programmeType}` : null,
     `Place: ${[p.from, p.to].filter(Boolean).join(' to ')}`,
@@ -245,4 +252,77 @@ export function billText(p, s, ledger) {
   L.push(`*Balance: ${inr(m.balance)}*`);
   if (s.phones) L.push('', `Mob: ${s.phones}`);
   return L.filter((x) => x !== null).join('\n');
+}
+
+// ---------- Payment receipt (one payment, not the whole bill) ----------
+// pay = { amount, mode, date, note }, no = receipt number like "30-2".
+export function paymentList(p) {
+  const list = [];
+  if (n(p.advance) > 0) list.push({ amount: n(p.advance), mode: p.advanceMode || 'Cash', date: p.receiptDate, note: 'Advance', no: String(p.serial) + '-1' });
+  (p.payments || []).forEach((x, i) => list.push({ ...x, no: String(p.serial) + '-' + (list.length + 1) }));
+  return list;
+}
+
+export function paymentHTML(p, settings, ledger, pay) {
+  const s = settings, m = projMoney(p, ledger), D = billPalette(s);
+  const all = paymentList(p);
+  const upto = all.slice(0, all.findIndex((x) => x.no === pay.no) + 1).reduce((a, x) => a + n(x.amount), 0);
+  const sigImg = /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(String(s.signature || '')) ? s.signature : '';
+  const row = (l, v) => (v ? `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>` : '');
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css(D)}
+.pr{max-width:520px;margin:0 auto}
+.big{margin:14px 0 6px;border-radius:14px;background:${D.tint};border:1px solid ${D.line};padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+.big span{color:${D.muted};font-weight:800;font-size:12px;letter-spacing:.08em}
+.big b{color:${D.deep};font-size:28px;font-weight:900}
+</style></head><body>
+<div class="bill pr">
+<div class="band">
+  <div class="top">
+    <div><div class="brand">${esc(s.name || 'Your business')}</div>${s.regNo ? `<div class="reg">Regd. No. ${esc(s.regNo)}</div>` : ''}</div>
+    <span class="doc">PAYMENT RECEIPT</span>
+  </div>
+  ${s.phones ? `<div class="contact">${ICON.phone}<span>${esc(s.phones)}</span></div>` : ''}
+</div>
+<div class="meta">
+  <div><small>Receipt No.</small><b>${esc(pay.no)}</b></div>
+  <div class="r"><small>Date</small><b>${esc(dmy(pay.date) || '—')}</b></div>
+</div>
+<div class="body">
+  <div class="big"><span>AMOUNT RECEIVED</span><b>${inr(pay.amount)}</b></div>
+  <div class="amts">
+    ${row('Received from', p.customerName)}
+    ${row('Mobile', p.mobile)}
+    ${row('Paid by', pay.mode || 'Cash')}
+    ${row('Note', pay.note)}
+    ${row('For booking', 'Sl. No. ' + p.serial + ' · ' + dmy(p.bookingDate))}
+  </div>
+  <h3>ACCOUNT</h3>
+  <div class="amts">
+    <div><span>Bill total</span><b>${inr(m.net)}</b></div>
+    <div class="minus"><span>Paid till this receipt</span><b>${inr(upto)}</b></div>
+    <div class="strong"><span>Balance after this payment</span><b>${inr(Math.max(0, m.net - upto))}</b></div>
+  </div>
+  <div class="sig"><div><div class="top"><i></i></div><span>Customer signature</span></div><div><div class="top">${sigImg ? `<img src="${esc(sigImg)}" alt="Authorised signature">` : ''}</div><span>${esc(s.signTitle || 'Authorised signature')}</span>${s.signName ? `<em>${esc(s.signName)}</em>` : ''}</div></div>
+</div>
+</div>
+</body></html>`;
+}
+
+export function paymentText(p, s, ledger, pay) {
+  const m = projMoney(p, ledger);
+  const all = paymentList(p);
+  const upto = all.slice(0, all.findIndex((x) => x.no === pay.no) + 1).reduce((a, x) => a + n(x.amount), 0);
+  return [
+    `${s.name || ''} – PAYMENT RECEIPT No. ${pay.no}`,
+    `Date: ${dmy(pay.date)}`,
+    '',
+    `Received from: ${p.customerName || ''}`,
+    `Amount: ${inr(pay.amount)} (${pay.mode || 'Cash'})`,
+    `For booking Sl. No. ${p.serial}, programme ${dmy(p.bookingDate)}`,
+    '',
+    `Bill total: ${inr(m.net)}`,
+    `Paid till now: ${inr(upto)}`,
+    `*Balance: ${inr(Math.max(0, m.net - upto))}*`,
+    s.phones ? `\nMob: ${s.phones}` : null,
+  ].filter((x) => x !== null).join('\n');
 }

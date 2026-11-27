@@ -1,11 +1,12 @@
 import React, { useLayoutEffect, useState } from 'react';
-import { View, Text, Share, StyleSheet, Platform, Image } from 'react-native';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import { Screen, Btn, BtnRow, Empty, T, Icon, toast } from '../components/ui';
+import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
+import { Screen, Btn, BtnRow, Empty, T, Icon } from '../components/ui';
+import QrCode from '../components/QrCode';
+import { printHtml, sharePdf, shareText } from '../share';
+import { showUpi, upiLink } from '../upi';
 import { useStore } from '../store';
 import { billHTML, billText, billPalette, DOC } from '../bill';
-import { dayName, dmy, inr, n, projMoney, qtyLabel, setupLines, withUnit } from '../utils';
+import { aadhaarForBill, allMobiles, dayName, dmy, inr, n, projMoney, qtyLabel, setupLines, withUnit } from '../utils';
 
 // The receipt is a paper document: it keeps the same white look in light and dark mode,
 // and matches the PDF made by billHTML() in src/bill.js.
@@ -29,7 +30,7 @@ function AmountRow({ label, value, minus, strong }) {
   );
 }
 
-function BillPreview({ p, settings, ledger }) {
+function BillPreview({ p, settings, ledger, onAddUpi }) {
   const m = projMoney(p, ledger);
   const fin = p.status === 'final';
   const setup = setupLines(p, settings);
@@ -37,7 +38,7 @@ function BillPreview({ p, settings, ledger }) {
   const fx = setup.fx;
   const day = dayName(p.bookingDate);
   const received = m.paid - n(p.advance);
-  const time = [p.startTime, p.endTime].filter(Boolean).join(' – ') + (p.shift ? ` (${p.shift})` : '');
+  const time = ([p.startTime, p.endTime].filter(Boolean).join(' – ') + (p.shift ? ` (${p.shift})` : '')).trim();
   const route = [p.from, p.to].filter(Boolean).join(' → ');
   const paid = m.balance <= 0;
   const D = billPalette(settings); // the receipt colour chosen in Settings
@@ -83,14 +84,14 @@ function BillPreview({ p, settings, ledger }) {
           <Field label="Name" value={p.customerName} />
           <Field label="Age" value={p.age ? String(p.age) : ''} />
           <Field label="Father’s name" value={p.fatherName} />
-          <Field label="Mobile" value={p.mobile} />
+          <Field label="Mobile" value={allMobiles(p).join(', ')} />
           <Field label="Address" value={p.address} wide />
           <Field label="Programme date" value={[dmy(p.bookingDate), day].filter(Boolean).join(', ')} />
           <Field label="Time" value={time} />
           <Field label="Programme" value={[p.segment, p.eventType].filter(Boolean).join(' · ')} />
           <Field label="Type" value={p.programmeType} />
           <Field label="From → To" value={route} wide />
-          <Field label="Aadhaar No." value={p.aadhaar} />
+          <Field label="Aadhaar No." value={aadhaarForBill(p.aadhaar, settings)} />
           <Field label="PAN" value={p.pan} />
         </View>
 
@@ -108,6 +109,31 @@ function BillPreview({ p, settings, ledger }) {
           <Text style={[s.balanceL, paid && { color: DOC.good }]}>{paid ? 'PAID IN FULL' : 'BALANCE DUE'}</Text>
           <Text style={[s.balanceV, paid && { color: DOC.good }]}>{inr(Math.max(0, m.balance))}</Text>
         </View>
+
+        {/* Scan to pay the balance by UPI */}
+        {showUpi(settings, m.balance) ? (
+          <View style={[s.upi, { borderColor: D.line, backgroundColor: D.tint }]}>
+            <QrCode value={upiLink(settings, m.balance, 'Sl ' + p.serial + ' ' + (p.customerName || ''))} size={116} />
+            <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+              <Text style={[s.upiH, { color: D.deep }]}>Scan to pay {inr(m.balance)}</Text>
+              <Text style={s.upiT}>Any UPI app: GPay, PhonePe, Paytm, BHIM</Text>
+              <Text style={s.upiId} selectable>{settings.upiId}</Text>
+              {settings.upiName ? <Text style={s.upiT}>{settings.upiName}</Text> : null}
+            </View>
+          </View>
+        ) : m.balance > 0 && onAddUpi ? (
+          // Only on screen (never in the PDF): explain why there is no QR code yet.
+          <Pressable onPress={onAddUpi} accessibilityRole="button" style={({ pressed }) => [s.upiHint, { borderColor: D.accent, opacity: pressed ? 0.75 : 1 }]}>
+            <Icon name="qr-code-outline" size={30} color={D.accent} />
+            <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+              <Text style={[s.upiH, { color: D.deep, fontSize: 14 }]}>Add a UPI QR code to this bill</Text>
+              <Text style={s.upiT}>
+                {settings.upiId ? '“' + settings.upiId + '” doesn’t look like a UPI ID. Fix it in Settings.' : 'Save your UPI ID in Settings → Business details. Customers can then scan and pay ' + inr(m.balance) + '.'}
+              </Text>
+            </View>
+            <Icon name="chevron-forward" size={18} color={D.accent} />
+          </Pressable>
+        ) : null}
 
         {/* Description: sound setup and effects, with how many of each */}
         {sound.length || fx.length ? (
@@ -168,26 +194,6 @@ function BillPreview({ p, settings, ledger }) {
   );
 }
 
-// Web: print only the receipt. expo-print's web version prints the whole app window instead,
-// so the receipt HTML goes into a hidden frame and that frame is printed.
-function printOnWeb(html) {
-  const frame = document.createElement('iframe');
-  frame.setAttribute('aria-hidden', 'true');
-  // Off screen at the A4 printable width (210 mm minus 6 mm margins), so the receipt lays out (and fits to one page) the way it will print.
-  Object.assign(frame.style, { position: 'fixed', left: '-10000px', top: '0', width: '748px', height: '1123px', border: '0' });
-  document.body.appendChild(frame);
-  const doc = frame.contentWindow.document;
-  doc.open();
-  doc.write(html);
-  doc.close();
-  // Give fonts a moment to load, then print and clean up.
-  setTimeout(() => {
-    frame.contentWindow.focus();
-    frame.contentWindow.print();
-    setTimeout(() => frame.remove(), 1000);
-  }, 400);
-}
-
 export default function BillScreen({ navigation, route }) {
   const { projects, settings, ledger } = useStore();
   const p = projects.find((x) => x.id === route.params.id);
@@ -200,53 +206,15 @@ export default function BillScreen({ navigation, route }) {
   if (!p) return <Screen><Empty title="Bill not found" /></Screen>;
 
   const html = () => billHTML(p, settings, ledger);
-
-  const sharePdf = async () => {
-    if (Platform.OS === 'web') {
-      // Browsers cannot make a PDF file directly; the print window has "Save as PDF".
-      toast('Choose “Save as PDF” in the print window');
-      return printOnWeb(html());
-    }
-    setBusy(true);
-    try {
-      const { uri } = await Print.printToFileAsync({ html: html() });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share bill', UTI: 'com.adobe.pdf' });
-      } else toast('Sharing isn’t available on this phone.');
-    } catch (e) {
-      toast('Couldn’t make the PDF. Try again.');
-    }
-    setBusy(false);
-  };
-  const print = async () => {
-    if (Platform.OS === 'web') return printOnWeb(html());
-    try {
-      await Print.printAsync({ html: html() });
-    } catch (e) {
-      if (!/cancel/i.test(String(e && e.message))) toast('Couldn’t open printing. Check that a printer or print service is set up.');
-    }
-  };
-  const shareText = async () => {
-    const message = billText(p, settings, ledger);
-    if (Platform.OS === 'web' && !(typeof navigator !== 'undefined' && navigator.share)) {
-      try {
-        await navigator.clipboard.writeText(message);
-        toast('Bill text copied. Paste it in WhatsApp.');
-      } catch (e) {
-        toast('Couldn’t copy the text on this browser.');
-      }
-      return;
-    }
-    Share.share({ message }).catch(() => {});
-  };
+  const onPdf = async () => { setBusy(true); await sharePdf(html()); setBusy(false); };
 
   return (
     <Screen>
-      <BillPreview p={p} settings={settings} ledger={ledger} />
-      <Btn title={busy ? 'Making PDF…' : 'Share bill as PDF'} onPress={sharePdf} disabled={busy} />
+      <BillPreview p={p} settings={settings} ledger={ledger} onAddUpi={() => navigation.navigate('Settings')} />
+      <Btn title={busy ? 'Making PDF…' : 'Share bill as PDF'} onPress={onPdf} disabled={busy} />
       <BtnRow>
-        <Btn variant="secondary" title="Print" onPress={print} />
-        <Btn variant="secondary" title="Send as text" onPress={shareText} />
+        <Btn variant="secondary" title="Print" onPress={() => printHtml(html())} />
+        <Btn variant="secondary" title="Send as text" onPress={() => shareText(billText(p, settings, ledger))} />
       </BtnRow>
       <T muted size={12.5}>The PDF looks the same as this preview. Send it on WhatsApp or save it to your phone.</T>
     </Screen>
@@ -268,6 +236,11 @@ const s = StyleSheet.create({
   body: { padding: 18, gap: 10 },
   regNo: { color: 'rgba(255,255,255,0.75)', fontSize: 11.5, fontWeight: '700', marginTop: 3 },
   desc: { borderWidth: 1, borderColor: DOC.line, borderRadius: 14, padding: 12, gap: 12 },
+  upi: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1, borderRadius: 14, padding: 12 },
+  upiHint: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 14, padding: 12, backgroundColor: '#ffffff' },
+  upiH: { fontSize: 15, fontWeight: '900' },
+  upiT: { color: DOC.muted, fontSize: 12, fontWeight: '600' },
+  upiId: { color: DOC.ink, fontSize: 13.5, fontWeight: '800', marginTop: 2 },
   descH: { color: DOC.muted, fontSize: 11, fontWeight: '800', letterSpacing: 0.4 },
   descGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 8, columnGap: 14 },
   // Fixed half-width cells, so an odd last item stays in its column instead of stretching.

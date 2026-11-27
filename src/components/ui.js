@@ -6,6 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme, tone, shadow } from '../theme';
 import { dmy, parseDate } from '../utils';
+import { useStore } from '../store';
+import { tr, trChildren } from '../i18n';
+
+// Current app language ('en' or 'or'), from Settings.
+export const useLang = () => (useStore() || {}).settings?.lang || 'en';
 
 // One icon component for the whole app, so every icon is centred and sized the same way.
 // Names are Ionicons (https://icons.expo.fyi); prefix with "mci:" for a MaterialCommunityIcons name.
@@ -31,6 +36,8 @@ export function Screen({ children, scroll = true, pad = true }) {
 
 export function T({ style, muted, weight, size, color, children, ...rest }) {
   const c = useTheme();
+  const lang = useLang();
+  children = trChildren(children, lang);
   return (
     <Text
       style={[
@@ -321,8 +328,9 @@ export function Chips({ options, value, onChange, multi, scroll }) {
 }
 export const opts = (arr) => arr.map((x) => (Array.isArray(x) ? { value: x[0], label: x[1] } : { value: x, label: x }));
 
-export function Field({ label, value, onChangeText, required, multiline, keyboardType, placeholder, style, autoCapitalize }) {
+export function Field({ label, value, onChangeText, required, multiline, keyboardType, placeholder, style, autoCapitalize, secureTextEntry, maxLength }) {
   const c = useTheme();
+  const lang = useLang();
   const [focus, setFocus] = useState(false);
   return (
     <View style={[{ gap: 6, flex: 1, minWidth: 0 }, style]}>
@@ -330,11 +338,14 @@ export function Field({ label, value, onChangeText, required, multiline, keyboar
       <TextInput
         value={value == null ? '' : String(value)}
         onChangeText={onChangeText}
-        placeholder={placeholder}
+        placeholder={tr(placeholder, lang)}
         placeholderTextColor={c.muted}
         multiline={multiline}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
+        secureTextEntry={secureTextEntry}
+        maxLength={maxLength}
+        accessibilityLabel={label || placeholder}
         onFocus={() => setFocus(true)}
         onBlur={() => setFocus(false)}
         style={{
@@ -443,4 +454,25 @@ export function toast(m) {
   toastSetter(m);
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastSetter && toastSetter(''), 2600);
+}
+
+// Green WhatsApp button (full) or icon-only (compact, for list rows).
+export function WhatsAppBtn({ title, onPress, compact }) {
+  const c = useTheme();
+  const bg = c.dark ? '#103a24' : '#e3f8ec';
+  const fg = c.dark ? '#5fe39a' : '#0b8a44';
+  if (compact)
+    return (
+      <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={title || 'Send on WhatsApp'}
+        style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 11, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}>
+        <Icon name="logo-whatsapp" size={19} color={fg} />
+      </Pressable>
+    );
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button"
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: bg, borderRadius: 16, paddingVertical: 13, paddingHorizontal: 14, opacity: pressed ? 0.8 : 1 })}>
+      <Icon name="logo-whatsapp" size={20} color={fg} />
+      <T weight="800" color={fg} style={{ textAlign: 'center' }}>{title}</T>
+    </Pressable>
+  );
 }

@@ -1,10 +1,10 @@
 import React, { useLayoutEffect, useState } from 'react';
-import { TextInput, View } from 'react-native';
-import { Screen, List, Empty, Chips, LinkBtn, HeaderBtn } from '../components/ui';
+import { TextInput, View, Pressable } from 'react-native';
+import { Screen, List, Empty, Chips, LinkBtn, HeaderBtn, Icon, T } from '../components/ui';
 import { ProjRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
-import { projMoney, today } from '../utils';
+import { clashesFor, projMoney, today } from '../utils';
 
 const FILTERS = [
   { value: 'upcoming', label: 'Upcoming' },
@@ -37,8 +37,26 @@ export default function BookingsScreen({ navigation }) {
   const qq = q.trim().toLowerCase();
   if (qq) list = list.filter((p) => [p.customerName, p.mobile, p.from, p.to, p.serial, p.fatherName].join(' ').toLowerCase().includes(qq));
 
+  const clashCount = projects.filter((p) => p.status !== 'cancel' && String(p.bookingDate) >= td && clashesFor(projects, p).length).length;
+  const Shortcut = ({ icon, label, sub, onPress, warn }) => (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: warn ? c.badBg : c.plumBg, borderRadius: 16, padding: 12, opacity: pressed ? 0.8 : 1 }]}
+    >
+      <Icon name={icon} size={22} color={warn ? c.bad : c.accent} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <T weight="800" color={warn ? c.bad : c.plum}>{label}</T>
+        {sub ? <T size={11.5} weight="600" color={warn ? c.bad : c.muted} numberOfLines={1}>{sub}</T> : null}
+      </View>
+    </Pressable>
+  );
+
   return (
     <Screen>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <Shortcut icon="calendar-outline" label="Calendar" sub={clashCount ? clashCount + ' bookings clash' : 'See free dates'} warn={clashCount > 0} onPress={() => navigation.navigate('Calendar')} />
+        <Shortcut icon="people-circle-outline" label="Customers" sub="Repeat customers" onPress={() => navigation.navigate('Customers')} />
+      </View>
       <TextInput
         value={q}
         onChangeText={setQ}

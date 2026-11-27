@@ -7,6 +7,83 @@ import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { textToUnits, unitsToText } from '../utils';
 import { BILL_COLORS, billPalette, isHexColor, normHex } from '../bill';
+import { bioAvailable, hashPin, PIN_LENGTH } from '../lock';
+import { isUpiId } from '../upi';
+import { LANGS } from '../i18n';
+
+// App lock (PIN, fingerprint) and how much of the Aadhaar number prints on bills.
+function PrivacyCard() {
+  const c = useTheme();
+  const { settings, saveSettings } = useStore();
+  const on = !!settings.lockPin;
+  const [mode, setMode] = useState(''); // '' | 'set' | 'off'
+  const [a, setA] = useState('');
+  const [b, setB] = useState('');
+  const [cur, setCur] = useState('');
+  const [bio, setBio] = useState(false);
+  React.useEffect(() => { bioAvailable().then(setBio); }, []);
+  const reset = () => { setMode(''); setA(''); setB(''); setCur(''); };
+  const okPin = (v) => new RegExp('^\\d{' + PIN_LENGTH + '}$').test(v);
+
+  const savePin = async () => {
+    if (on && (await hashPin(cur)) !== settings.lockPin) return toast('Current PIN is wrong.');
+    if (!okPin(a)) return toast('Enter ' + PIN_LENGTH + ' digits.');
+    if (a !== b) return toast('The two PINs don’t match.');
+    saveSettings({ lockPin: await hashPin(a) });
+    reset();
+    toast(on ? 'PIN changed' : 'App lock is on');
+  };
+  const turnOff = async () => {
+    if ((await hashPin(cur)) !== settings.lockPin) return toast('Current PIN is wrong.');
+    saveSettings({ lockPin: '', lockBio: false });
+    reset();
+    toast('App lock is off');
+  };
+
+  return (
+    <Card style={{ gap: 12 }}>
+      <T weight="800" size={17}>Privacy & app lock</T>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: on ? c.goodBg : c.surface2, borderRadius: 14, padding: 12 }}>
+        <Icon name={on ? 'lock-closed' : 'lock-open-outline'} size={20} color={on ? c.good : c.muted} />
+        <T weight="700" color={on ? c.good : c.muted} style={{ flex: 1 }}>
+          {on ? 'App lock is on. The app asks for the PIN when it opens, and after a minute away.' : 'App lock is off. Anyone with this phone can open the app.'}
+        </T>
+      </View>
+      {mode ? (
+        <View style={{ gap: 10 }}>
+          {on ? <Field label="Current PIN" value={cur} onChangeText={setCur} keyboardType="number-pad" secureTextEntry maxLength={PIN_LENGTH} /> : null}
+          {mode === 'set' ? (
+            <FRowLike>
+              <Field label={'New ' + PIN_LENGTH + '-digit PIN'} value={a} onChangeText={setA} keyboardType="number-pad" secureTextEntry maxLength={PIN_LENGTH} />
+              <Field label="Repeat PIN" value={b} onChangeText={setB} keyboardType="number-pad" secureTextEntry maxLength={PIN_LENGTH} />
+            </FRowLike>
+          ) : null}
+          <BtnRow>
+            {mode === 'set' ? <Btn title={on ? 'Save new PIN' : 'Turn on app lock'} onPress={savePin} /> : <Btn variant="danger" title="Turn off app lock" onPress={turnOff} />}
+            <Btn variant="secondary" title="Cancel" onPress={reset} />
+          </BtnRow>
+          {mode === 'set' ? <T muted size={12.5}>If you forget the PIN, the app can’t be opened without clearing its data. Keep a backup (below) and remember the PIN.</T> : null}
+        </View>
+      ) : (
+        <BtnRow>
+          <Btn variant={on ? 'secondary' : 'primary'} title={on ? 'Change PIN' : 'Set a PIN'} onPress={() => setMode('set')} />
+          {on ? <Btn variant="danger" title="Turn off" onPress={() => setMode('off')} /> : null}
+        </BtnRow>
+      )}
+      {on && bio ? (
+        <View style={{ gap: 8 }}>
+          <T muted size={12.5} weight="700">Fingerprint / face unlock</T>
+          <Chips options={opts([[false, 'PIN only'], [true, 'Allow fingerprint']])} value={!!settings.lockBio} onChange={(v) => saveSettings({ lockBio: v })} />
+        </View>
+      ) : null}
+      <View style={{ gap: 8 }}>
+        <T muted size={12.5} weight="700">Aadhaar number on bills and receipts</T>
+        <Chips options={opts([[false, 'Full number'], [true, 'Last 4 digits only']])} value={!!settings.maskAadhaar} onChange={(v) => saveSettings({ maskAadhaar: v })} />
+      </View>
+    </Card>
+  );
+}
+const FRowLike = ({ children }) => <View style={{ flexDirection: 'row', gap: 12 }}>{children}</View>;
 
 const lines = (s) => String(s || '').split('\n').map((x) => x.trim()).filter(Boolean);
 
@@ -181,8 +258,10 @@ export default function SettingsScreen({ navigation }) {
   const set = (k) => (v) => setF((s) => ({ ...s, [k]: v }));
 
   const onSave = () => {
+    if (String(f.upiId || '').trim() && !isUpiId(f.upiId)) return toast('UPI ID should look like name@bank, for example regalmusic@okaxis.');
     saveSettings({
       name: f.name.trim(), tagline: f.tagline.trim(), regNo: String(f.regNo || '').trim(), phones: f.phones.trim(), address: f.address.trim(),
+      upiId: String(f.upiId || '').trim(), upiName: String(f.upiName || '').trim(),
       soundSetup: lines(f.soundSetup),
       itemUnits: textToUnits(f.itemUnits),
       services: lines(f.services), segments: lines(f.segments), roles: lines(f.roles), invCategories: lines(f.invCategories), expenseCategories: lines(f.expenseCategories),
@@ -201,6 +280,9 @@ export default function SettingsScreen({ navigation }) {
           value={settings.theme || 'light'}
           onChange={(v) => saveSettings({ theme: v })}
         />
+        <T muted size={12.5} weight="700">Language</T>
+        <Chips options={opts(LANGS)} value={settings.lang || 'en'} onChange={(v) => saveSettings({ lang: v })} />
+        <T muted size={12}>Screens, buttons and messages change language. Bills and receipts stay in English, with your own rules as written.</T>
       </Card>
 
       <Card style={{ gap: 14 }}>
@@ -209,6 +291,10 @@ export default function SettingsScreen({ navigation }) {
         <Field label="Regd. No. (optional)" value={f.regNo} onChangeText={set('regNo')} placeholder="Registration number printed on the bill" />
         <Field label="Mobile numbers" value={f.phones} onChangeText={set('phones')} />
         <Field label="Address" value={f.address} onChangeText={set('address')} multiline />
+        <FSec>UPI payment (QR on the bill)</FSec>
+        <Field label="UPI ID" value={f.upiId} onChangeText={set('upiId')} placeholder="yourname@okaxis" autoCapitalize="none" />
+        <Field label="Name shown in the UPI app (optional)" value={f.upiName} onChangeText={set('upiName')} placeholder="Same as business name" />
+        <T muted size={12.5}>When set, every bill with a balance due shows a QR code. The customer scans it with any UPI app and the amount is filled in.</T>
         <FSec>Lists (one per line)</FSec>
         <Field label="Sound setup items" value={f.soundSetup} onChangeText={set('soundSetup')} multiline />
         <Field label="Effects on the bill" value={f.services} onChangeText={set('services')} multiline />
@@ -222,6 +308,8 @@ export default function SettingsScreen({ navigation }) {
         <Field label="Rules printed on the bill (one per line)" value={f.rules} onChangeText={set('rules')} multiline />
         <Btn title="Save business details" onPress={onSave} />
       </Card>
+
+      <PrivacyCard />
 
       <ReceiptColorCard />
 
