@@ -1,6 +1,6 @@
 import React, { useLayoutEffect } from 'react';
 import { View } from 'react-native';
-import { Screen, Card, T, H2, KV, Btn, BtnRow, List, Empty, LinkBtn } from '../components/ui';
+import { Screen, Card, T, H2, KV, Btn, BtnRow, List, Empty, LinkBtn, HeaderBtn } from '../components/ui';
 import { LedRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
@@ -14,7 +14,7 @@ export default function StaffDetailScreen({ navigation, route }) {
 
   useLayoutEffect(() => {
     if (!e) return;
-    navigation.setOptions({ title: e.name, headerRight: () => <LinkBtn onPress={() => navigation.navigate('StaffForm', { id: e.id })}>Edit</LinkBtn> });
+    navigation.setOptions({ title: e.name, headerRight: () => <HeaderBtn title="Edit" onPress={() => navigation.navigate('StaffForm', { id: e.id })} /> });
   }, [navigation, e]);
 
   if (!e) return <Screen><Empty title="Staff member not found" /></Screen>;

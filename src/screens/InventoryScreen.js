@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { TextInput, View } from 'react-native';
-import { Screen, List, Empty, Card, MoneyRow, LinkBtn, Chips, opts, H2 } from '../components/ui';
+import { Screen, List, Empty, Card, MoneyRow, LinkBtn, Chips, opts, H2, HeaderBtn } from '../components/ui';
 import { ItemRow, MoveRow } from '../components/rows';
 import { useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
@@ -13,7 +13,7 @@ export default function InventoryScreen({ navigation }) {
   const [cat, setCat] = useState('');
 
   useLayoutEffect(() => {
-    navigation.setOptions({ headerRight: () => <View style={{ marginRight: 16 }}><LinkBtn onPress={() => navigation.navigate('ItemForm')}>+ Add</LinkBtn></View> });
+    navigation.setOptions({ headerRight: () => <HeaderBtn title="+ Add" onPress={() => navigation.navigate('ItemForm')} /> });
   }, [navigation]);
 
   if (!items.length)

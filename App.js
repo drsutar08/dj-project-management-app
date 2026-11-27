@@ -7,7 +7,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { StatusBar } from 'expo-status-bar';
 import { StoreProvider } from './src/store';
 import { useTheme, shadow } from './src/theme';
-import { ToastHost } from './src/components/ui';
+import { ToastHost, Icon } from './src/components/ui';
 
 import HomeScreen from './src/screens/HomeScreen';
 import BookingsScreen from './src/screens/BookingsScreen';
@@ -30,7 +30,8 @@ import ExpenseFormScreen from './src/screens/ExpenseFormScreen';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const TAB_ICONS = { Home: '⌂', Bookings: '▦', Staff: '☺', Payments: '₹', Bills: '≣' };
+// Ionicons names; the open tab shows the filled icon, the others the "-outline" version.
+const TAB_ICONS = { Home: 'home', Bookings: 'calendar', Staff: 'people', Payments: 'wallet', Bills: 'receipt' };
 
 // White bar docked to the bottom; the open tab is shown in the accent colour.
 function TabBar({ state, descriptors, navigation }) {
@@ -64,7 +65,7 @@ function TabBar({ state, descriptors, navigation }) {
             style={{ flex: 1, alignItems: 'center', paddingVertical: 2 }}
           >
             <View style={{ width: 46, height: 30, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: focused ? c.plumBg : 'transparent' }}>
-              <Text style={{ fontSize: 19, color: focused ? c.accent : c.muted, fontWeight: '800' }}>{TAB_ICONS[route.name]}</Text>
+              <Icon name={TAB_ICONS[route.name] + (focused ? '' : '-outline')} size={21} color={focused ? c.accent : c.muted} />
             </View>
             <Text style={{ fontSize: 11, fontWeight: focused ? '800' : '600', color: focused ? c.accent : c.muted, marginTop: 2 }}>{label}</Text>
           </Pressable>

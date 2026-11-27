@@ -3,8 +3,17 @@ import {
   View, Text, Pressable, TextInput, ScrollView, StyleSheet, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme, tone, shadow } from '../theme';
 import { dmy, parseDate } from '../utils';
+
+// One icon component for the whole app, so every icon is centred and sized the same way.
+// Names are Ionicons (https://icons.expo.fyi); prefix with "mci:" for a MaterialCommunityIcons name.
+export function Icon({ name, size = 20, color, style }) {
+  const c = useTheme();
+  if (String(name).startsWith('mci:')) return <MaterialCommunityIcons name={name.slice(4)} size={size} color={color || c.fg} style={style} />;
+  return <Ionicons name={name} size={size} color={color || c.fg} style={style} />;
+}
 
 export function Screen({ children, scroll = true, pad = true }) {
   const c = useTheme();
@@ -53,6 +62,21 @@ export function LinkBtn({ children, onPress }) {
   );
 }
 
+// Small pill button for the top-right of a screen header (Edit, + Add…), kept clear of the edge.
+export function HeaderBtn({ title, onPress }) {
+  const c = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      accessibilityRole="button"
+      style={({ pressed }) => ({ marginRight: 16, backgroundColor: c.plumBg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, opacity: pressed ? 0.7 : 1 })}
+    >
+      <T color={c.plum} weight="800" size={13}>{title}</T>
+    </Pressable>
+  );
+}
+
 export function Card({ children, style }) {
   const c = useTheme();
   return <View style={[{ backgroundColor: c.surface, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: c.line }, shadow, style]}>{children}</View>;
@@ -62,7 +86,7 @@ export function Btn({ title, onPress, variant = 'primary', style, disabled }) {
   const c = useTheme();
   const v = {
     primary: { bg: c.accent, fg: c.accentInk },
-    secondary: { bg: c.surface, fg: c.fg },
+    secondary: { bg: c.plumBg, fg: c.plum },
     danger: { bg: c.badBg, fg: c.bad },
   }[variant];
   return (
@@ -75,7 +99,8 @@ export function Btn({ title, onPress, variant = 'primary', style, disabled }) {
           alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.5 : 1,
           transform: [{ scale: pressed ? 0.98 : 1 }],
         },
-        variant !== 'danger' && shadow,
+        variant === 'primary' && shadow,
+        variant === 'primary' && { shadowColor: c.accent, shadowOpacity: 0.25 },
         style,
       ]}
     >
@@ -147,12 +172,13 @@ export function Row({ left, title, sub, right, rightSub, rightColor, onPress, ex
   );
 }
 
-export function Tile({ top, bottom, t = 'plum' }) {
+// Square badge at the start of a list row: an icon, a short text (initials), or a date (top + bottom).
+export function Tile({ top, bottom, icon, t = 'plum' }) {
   const c = useTheme();
   const k = tone(c, t);
   return (
     <View style={{ width: 46, height: 46, borderRadius: 15, backgroundColor: k.bg, alignItems: 'center', justifyContent: 'center' }}>
-      <T color={k.fg} weight="800" size={bottom ? 18 : 15}>{top}</T>
+      {icon ? <Icon name={icon} size={21} color={k.fg} /> : <T color={k.fg} weight="800" size={bottom ? 18 : 15}>{top}</T>}
       {bottom ? <T color={k.fg} weight="800" size={10} style={{ letterSpacing: 0.6 }}>{bottom.toUpperCase()}</T> : null}
     </View>
   );
@@ -211,8 +237,38 @@ export function RemoveBtn({ onPress }) {
       }}
       style={{ backgroundColor: armed ? c.badBg : c.surface2, borderRadius: 9, height: 28, minWidth: 28, paddingHorizontal: armed ? 8 : 0, alignItems: 'center', justifyContent: 'center' }}
     >
-      <T color={armed ? c.bad : c.muted} weight="800" size={armed ? 12 : 15}>{armed ? 'Delete' : '×'}</T>
+      {armed ? <T color={c.bad} weight="800" size={12}>Delete</T> : <Icon name="close" size={16} color={c.muted} />}
     </Pressable>
+  );
+}
+
+// One line with a name and a − count + control. 0 means "not included".
+export function QtyRow({ label, value, onChange, unit, step = 1 }) {
+  const c = useTheme();
+  const v = Number(value) || 0;
+  const btn = (icon, d, a11y, disabled) => (
+    <Pressable
+      onPress={() => onChange(Math.max(0, Math.round((v + d * step) * 100) / 100))}
+      disabled={disabled}
+      hitSlop={6}
+      accessibilityRole="button"
+      accessibilityLabel={a11y + ' ' + label}
+      style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: v ? c.plumBg : c.surface2, opacity: disabled ? 0.35 : pressed ? 0.7 : 1 })}
+    >
+      <Icon name={icon} size={18} color={v ? c.accent : c.muted} />
+    </Pressable>
+  );
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 }}>
+      <T weight={v ? '800' : '600'} color={v ? c.fg : c.muted} style={{ flex: 1 }}>{label}</T>
+      {btn('remove', -1, 'Less', !v)}
+      <View style={{ minWidth: unit ? 56 : 26, alignItems: 'center' }}>
+        <T weight="800" size={16} style={{ textAlign: 'center', fontVariant: ['tabular-nums'] }} color={v ? c.accent : c.muted}>
+          {v}{unit ? <T size={12} weight="700" color={v ? c.accent : c.muted}> {unit}</T> : null}
+        </T>
+      </View>
+      {btn('add', 1, 'More', false)}
+    </View>
   );
 }
 
@@ -244,12 +300,14 @@ export function Chips({ options, value, onChange, multi, scroll }) {
           onChange(options.map((x) => x.value).filter((x) => set.has(x)));
         }}
         style={{
+          flexDirection: 'row', alignItems: 'center', gap: 5,
           borderRadius: multi ? 12 : 99, paddingHorizontal: 14, paddingVertical: 9,
           backgroundColor: on ? (multi ? c.plumBg : c.fg) : c.surface2,
           borderWidth: 1.5, borderColor: on && multi ? c.accent : 'transparent',
         }}
       >
-        <T weight="700" size={13} color={on ? (multi ? c.fg : c.bg) : c.muted}>{(multi && on ? '✓ ' : '') + o.label}</T>
+        {multi && on ? <Icon name="checkmark" size={15} color={c.accent} /> : null}
+        <T weight="700" size={13} color={on ? (multi ? c.fg : c.bg) : c.muted}>{o.label}</T>
       </Pressable>
     );
   });

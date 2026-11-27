@@ -5,7 +5,11 @@ export const DEFAULT_SETTINGS = {
   tagline: '',
   phones: '',
   address: '',
-  services: ['Sharpy', 'CO₂', 'Paper Spray', 'S. Show', 'Cold Fire'],
+  regNo: '', // business registration number, printed on the bill
+  soundSetup: ['Sound Bass', 'Sound Top', 'HF', 'Unit'],
+  // Unit for an item's count on bookings and bills. Items not listed are counted in pieces.
+  itemUnits: { 'Paper Spray': 'Kg' },
+  services: ['Sharpy', 'CO₂', 'Paper Spray', 'S. Show', 'Cold Fire', 'Smoke', 'LED Par', 'Water', 'Laser'],
   segments: ['DJ', 'Sound System', 'Lighting', 'Band', 'Tent & Decor'],
   roles: ['DJ Operator', 'Light Operator', 'Sound Engineer', 'Helper', 'Driver', 'Manager'],
   invCategories: [
@@ -102,6 +106,7 @@ export const ITEM_PRESETS = [
 
 export const PAYTYPES =['Per event', 'Per day', 'Per month', 'Per hour'];
 export const MODES = ['Cash', 'UPI', 'Bank transfer'];
+export const PROGRAMME_TYPES = ['Competition', 'Non-competition'];
 export const EVENTS = ['Wedding', 'Barat procession', 'Puja / Bhasani', 'Birthday', 'Party', 'Other'];
 
 // Data the app starts with the first time it opens.

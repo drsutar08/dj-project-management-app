@@ -156,3 +156,46 @@ export const addDays = (iso, k) => {
 };
 export const daysInMonth = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate(); // m is 1-12
 export const signed = (v) => (v < 0 ? '−' : v > 0 ? '+' : '') + inr(Math.abs(v));
+
+// Day of the week for a YYYY-MM-DD date, e.g. "Monday".
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+export const dayName = (iso) => {
+  const p = String(iso || '').split('-').map(Number);
+  if (p.length !== 3 || !p[0]) return '';
+  return DAYS[new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay()];
+};
+
+// Quantity of a setup item or effect on a booking. Older bookings only had a list of
+// included effects (no counts), so an included effect without a count counts as 1.
+export const qtyOf = (p, name) => {
+  const q = p && p.qty ? n(p.qty[name]) : 0;
+  if (q) return q;
+  return (p && p.services || []).includes(name) ? 1 : 0;
+};
+
+// Sound setup and effects lines for a booking: [{ name, qty, kind }], in settings order.
+export function setupLines(p, settings) {
+  const units = settings.itemUnits || {};
+  const sound = (settings.soundSetup || []).map((name) => ({ name, qty: qtyOf(p, name), kind: 'sound', unit: units[name] || '' }));
+  const fx = (settings.services || []).concat((p.services || []).filter((x) => !(settings.services || []).includes(x) && !(settings.soundSetup || []).includes(x)))
+    .map((name) => ({ name, qty: qtyOf(p, name), kind: 'effect', unit: units[name] || '' }));
+  return { sound, fx };
+}
+
+// Item name with its unit, e.g. "Paper Spray (Kg)". Items without a unit are counted in pieces.
+export const withUnit = (name, unit) => (unit ? name + ' (' + unit + ')' : name);
+// The count as shown: "5", "2.5".
+export const qtyLabel = (qty) => String(Math.round(n(qty) * 100) / 100);
+
+// Settings text "Paper Spray = kg" (one per line) <-> { 'Paper Spray': 'kg' }
+export const unitsToText = (m) => Object.entries(m || {}).map(([k, v]) => k + ' = ' + v).join('\n');
+export const textToUnits = (t) => {
+  const out = {};
+  String(t || '').split('\n').forEach((line) => {
+    const i = line.indexOf('=');
+    if (i < 0) return;
+    const k = line.slice(0, i).trim(), v = line.slice(i + 1).trim();
+    if (k && v) out[k] = v;
+  });
+  return out;
+};

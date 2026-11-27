@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useMemo, useState } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
-import { Screen, Card, T, H2, List, Row, Tile, Empty, MoneyRow, Chips, opts, LinkBtn } from '../components/ui';
+import { Screen, Card, T, H2, List, Row, Tile, Empty, MoneyRow, Chips, opts, LinkBtn, Icon, HeaderBtn } from '../components/ui';
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
 import { MON, addDays, daysInMonth, dmy, dparts, inr, periodPL, signed, today } from '../utils';
@@ -78,7 +78,7 @@ export default function ReportsScreen({ navigation }) {
   const [anchor, setAnchor] = useState(today());
 
   useLayoutEffect(() => {
-    navigation.setOptions({ headerRight: () => <View style={{ marginRight: 16 }}><LinkBtn onPress={() => navigation.navigate('ExpenseForm')}>+ Expense</LinkBtn></View> });
+    navigation.setOptions({ headerRight: () => <HeaderBtn title="+ Expense" onPress={() => navigation.navigate('ExpenseForm')} /> });
   }, [navigation]);
 
   const d = { projects: store.projects, ledger: store.ledger, expenses: store.expenses, moves: store.moves, items: store.items };
@@ -116,7 +116,7 @@ export default function ReportsScreen({ navigation }) {
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <Pressable onPress={() => setAnchor(shift(mode, anchor, -1))} hitSlop={8} accessibilityLabel="Previous" style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
-          <T size={20} weight="800">‹</T>
+          <Icon name="chevron-back" size={22} />
         </Pressable>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <T size={17} weight="800">{r.label}</T>
@@ -125,7 +125,7 @@ export default function ReportsScreen({ navigation }) {
           ) : null}
         </View>
         <Pressable onPress={() => setAnchor(shift(mode, anchor, 1))} hitSlop={8} accessibilityLabel="Next" style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' }}>
-          <T size={20} weight="800">›</T>
+          <Icon name="chevron-forward" size={22} />
         </Pressable>
       </View>
 
@@ -204,7 +204,7 @@ export default function ReportsScreen({ navigation }) {
                 <Row
                   key={e.id}
                   onPress={() => navigation.navigate('ExpenseForm', { id: e.id })}
-                  left={<Tile top="₹" t="warn" />}
+                  left={<Tile icon="receipt-outline" t="warn" />}
                   title={e.category || 'Expense'}
                   sub={[dmy(e.date), p ? p.customerName : 'General', e.note].filter(Boolean).join(' · ')}
                   right={inr(e.amount)}

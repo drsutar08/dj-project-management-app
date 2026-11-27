@@ -1,14 +1,14 @@
 import React, { useLayoutEffect, useState } from 'react';
-import { View } from 'react-native';
+import { View, ScrollView, Pressable } from 'react-native';
 import {
   Screen, Card, T, H2, KV, MoneyRow, Btn, BtnRow, ConfirmBtn, List, Empty, Pill, LinkBtn,
-  Sheet, Field, DateField, FRow, Chips, opts, toast, Row, Tile, RemoveBtn,
+  Sheet, Field, DateField, FRow, Chips, opts, toast, Row, Tile, RemoveBtn, HeaderBtn, Icon,
 } from '../components/ui';
 import { LedRow, MoveRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
-import { useTheme } from '../theme';
+import { useTheme, shadow } from '../theme';
 import { MODES, STATUSES } from '../defaults';
-import { bookingPL, dmy, initials, inr, itemAvail, maskId, n, projMoney, qtyTxt, signed, today } from '../utils';
+import { bookingPL, dayName, setupLines, qtyLabel, withUnit, dmy, dparts, initials, inr, itemAvail, maskId, n, projMoney, qtyTxt, signed, today } from '../utils';
 
 export default function BookingDetailScreen({ navigation, route }) {
   const c = useTheme();
@@ -23,7 +23,7 @@ export default function BookingDetailScreen({ navigation, route }) {
     if (!p) return;
     navigation.setOptions({
       title: p.customerName,
-      headerRight: () => <LinkBtn onPress={() => navigation.navigate('BookingForm', { id: p.id })}>Edit</LinkBtn>,
+      headerRight: () => <HeaderBtn title="Edit" onPress={() => navigation.navigate('BookingForm', { id: p.id })} />,
     });
   }, [navigation, p]);
 
@@ -31,7 +31,12 @@ export default function BookingDetailScreen({ navigation, route }) {
 
   const m = projMoney(p, ledger);
   const st = STATUSES[p.status || 'booked'] || STATUSES.booked;
-  const svc = settings.services.concat((p.services || []).filter((s) => !settings.services.includes(s)));
+  const dp = dparts(p.bookingDate);
+  const paidPct = m.net > 0 ? Math.max(0, Math.min(100, (m.paid / m.net) * 100)) : m.paid > 0 ? 100 : 0;
+  const setup = setupLines(p, settings);
+  const sound = setup.sound.filter((l) => l.qty);
+  const fx = setup.fx;
+  const day = dayName(p.bookingDate);
   const work = ledger.filter((l) => l.projectId === p.id);
   const patch = (ch, msg) => { patchProject(p.id, ch); if (msg) toast(msg); };
 
@@ -80,6 +85,9 @@ export default function BookingDetailScreen({ navigation, route }) {
     .filter(Boolean);
   const used = moves.filter((mv) => mv.projectId === p.id);
   const pl = bookingPL(p, { ledger, expenses, moves, items });
+  const addExpense = (category) => navigation.navigate('ExpenseForm', { projectId: p.id, category });
+  // Per-booking costs first; shop rent, electricity, phone and EMI are business-wide, so they are left out here.
+  const quickTypes = (settings.expenseCategories || []).filter((x) => !/shop rent|electricity|phone|internet|loan|emi/i.test(x));
   const pickIt = sheet === 'gear' ? items.find((x) => x.id === form.itemId) : null;
   let pickNote = '';
   if (pickIt && pickIt.kind === 'consumable') pickNote = qtyTxt(pickIt.qty, pickIt.unit) + ' in stock. This takes it out of stock now.';
@@ -93,35 +101,83 @@ export default function BookingDetailScreen({ navigation, route }) {
 
   return (
     <Screen>
-      <Card style={{ gap: 14 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Pill label={st.label} t={st.tone} />
-          <T muted size={12.5} weight="600">Sl. No. {p.serial}</T>
+      {/* Header: date tile, name, status, then time and route */}
+      <View style={[{ backgroundColor: c.heroBg, borderWidth: 1, borderColor: c.heroLine, borderRadius: 24, padding: 16, gap: 14 }, shadow]}>
+        <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+          <View style={[{ width: 64, height: 68, borderRadius: 18, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' }, shadow]}>
+            <T size={24} weight="800" color={c.accent} style={{ lineHeight: 26 }}>{dp.d}</T>
+            <T size={11} weight="800" color={c.accent} style={{ letterSpacing: 0.8 }}>{String(dp.m).toUpperCase()}</T>
+            <T size={10} muted weight="600">{dp.y}</T>
+          </View>
+          <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+            <T size={20} weight="800" numberOfLines={2} style={{ letterSpacing: -0.4 }}>{p.customerName || 'Unnamed'}</T>
+            {[p.segment, p.eventType, p.programmeType].filter(Boolean).length ? <T muted size={13} weight="600">{[p.segment, p.eventType, p.programmeType].filter(Boolean).join(' · ')}</T> : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+              <Pill label={st.label} t={st.tone} />
+              <T muted size={12} weight="700">Sl. No. {p.serial}</T>
+            </View>
+          </View>
         </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {[
+            ['today-outline', day],
+            ['time-outline', [p.startTime, p.endTime].filter(Boolean).join(' – ') + (p.shift ? ' · ' + p.shift : '')],
+            ['location-outline', [p.from, p.to].filter(Boolean).join(' → ')],
+          ]
+            .filter(([, v]) => v)
+            .map(([icon, v]) => (
+              <View key={icon} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: c.surface, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7, maxWidth: '100%' }}>
+                <Icon name={icon} size={15} color={c.accent} />
+                <T size={13} weight="700" numberOfLines={1} style={{ flexShrink: 1 }}>{v}</T>
+              </View>
+            ))}
+        </View>
+      </View>
+
+      {/* Payment summary: what is still due, and how much is paid */}
+      <View style={[{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 22, padding: 16, gap: 10 }, shadow]}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10 }}>
+          <View>
+            <T muted size={12.5} weight="700">{m.balance > 0 ? 'Balance due' : m.balance < 0 ? 'Paid extra' : 'Fully paid'}</T>
+            <T size={28} weight="800" color={m.balance > 0 ? c.bad : c.good} style={{ letterSpacing: -0.8 }}>{inr(Math.abs(m.balance))}</T>
+          </View>
+          <T muted size={12.5} weight="600" style={{ textAlign: 'right' }}>{inr(m.paid)} paid{'\n'}of {inr(m.net)}</T>
+        </View>
+        <View style={{ height: 8, borderRadius: 4, backgroundColor: c.surface2, overflow: 'hidden' }}>
+          <View style={{ width: `${paidPct}%`, height: 8, borderRadius: 4, backgroundColor: c.good }} />
+        </View>
+      </View>
+
+      {/* Customer details and effects */}
+      <Card style={{ gap: 14 }}>
         <KV
           rows={[
-            ['Programme date', dmy(p.bookingDate)],
-            ['Time', [p.startTime, p.endTime].filter(Boolean).join(' – ') + (p.shift ? ' · ' + p.shift : '')],
-            ['Segment / event', [p.segment, p.eventType].filter(Boolean).join(' · ')],
-            ['Route', [p.from, p.to].filter(Boolean).join(' → ')],
+            ['Age', p.age ? String(p.age) : ''],
             ['Father’s name', p.fatherName],
+            ['Address', p.address],
             ['Mobile', p.mobile],
             ['Aadhaar', maskId(p.aadhaar)],
             ['PAN', p.pan],
-            ['Receipt date', dmy(p.receiptDate)],
+            ['Booking date', dmy(p.receiptDate)],
             ['Notes', p.notes],
           ]}
         />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-          {svc.map((s) => {
-            const on = (p.services || []).includes(s);
-            return (
-              <View key={s} style={{ backgroundColor: on ? c.goodBg : c.surface2, borderRadius: 99, paddingHorizontal: 11, paddingVertical: 5 }}>
-                <T size={12.5} weight="700" color={on ? c.good : c.muted} style={!on && { textDecorationLine: 'line-through' }}>{s}</T>
+        {[['Sound setup', sound], ['Effects', fx]].map(([title, list]) =>
+          list.length ? (
+            <View key={title} style={{ gap: 8 }}>
+              <T muted size={12.5} weight="700">{title}</T>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {list.map(({ name, qty, unit }) => (
+                  <View key={name} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: qty ? c.plumBg : c.surface2, borderRadius: 99, paddingHorizontal: 11, paddingVertical: 6 }}>
+                    <Icon name={qty ? 'checkmark' : 'close'} size={14} color={qty ? c.accent : c.muted} />
+                    <T size={12.5} weight="700" color={qty ? c.plum : c.muted}>{withUnit(name, unit)}</T>
+                    {qty && (qty !== 1 || unit) ? <T size={12.5} weight="800" color={c.accent}>× {qtyLabel(qty)}</T> : null}
+                  </View>
+                ))}
               </View>
-            );
-          })}
-        </View>
+            </View>
+          ) : null
+        )}
       </Card>
 
       <View style={{ gap: 12 }}>
@@ -177,14 +233,53 @@ export default function BookingDetailScreen({ navigation, route }) {
         )}
       </View>
 
+      {/* Expenses for this booking: one-tap types, then the list (tap to edit) */}
       <View style={{ gap: 12 }}>
-        <H2 right="+ Add expense" onRight={() => navigation.navigate('ExpenseForm', { projectId: p.id })}>Profit & loss</H2>
+        <H2 right="+ Add expense" onRight={() => addExpense()}>Expenses</H2>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 16 }}>
+          {quickTypes.map((cat) => (
+            <Pressable
+              key={cat}
+              onPress={() => addExpense(cat)}
+              style={({ pressed }) => ({ backgroundColor: c.plumBg, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, opacity: pressed ? 0.7 : 1 })}
+            >
+              <T size={13} weight="800" color={c.plum}>+ {cat.split(' / ')[0]}</T>
+            </Pressable>
+          ))}
+        </ScrollView>
+        {pl.expenseList.length ? (
+          <List>
+            {pl.expenseList
+              .slice()
+              .sort((a, b) => String(a.date).localeCompare(String(b.date)) || (a.ts || 0) - (b.ts || 0))
+              .map((e) => (
+                <Row
+                  key={e.id}
+                  onPress={() => navigation.navigate('ExpenseForm', { id: e.id })}
+                  left={<Tile icon="receipt-outline" t="warn" />}
+                  title={e.category || 'Expense'}
+                  sub={[dmy(e.date), e.mode, e.note].filter(Boolean).join(' · ')}
+                  right={inr(e.amount)}
+                  extra={<RemoveBtn onPress={() => { deleteExpense(e.id); toast('Expense removed'); }} />}
+                />
+              ))}
+          </List>
+        ) : (
+          <Empty title="No expenses yet" text="Tap a type above to add diesel, transport, food, gear rent and other costs for this programme." />
+        )}
+        {pl.expenseList.length ? (
+          <Card style={{ gap: 8 }}>
+            <MoneyRow total label={`Total expenses (${pl.expenseList.length})`} value={inr(pl.expenses)} />
+          </Card>
+        ) : null}
+      </View>
+
+      <View style={{ gap: 12 }}>
+        <H2>Profit & loss</H2>
         <Card style={{ gap: 8 }}>
           <MoneyRow label={pl.cancelled ? 'Kept from customer' : 'Bill total'} value={inr(pl.income)} />
           {pl.wages ? <MoneyRow label="− Staff wages" value={inr(pl.wages)} /> : null}
-          {pl.expenseList.map((e) => (
-            <MoneyRow key={e.id} label={'− ' + [e.category, e.note].filter(Boolean).join(' · ')} value={inr(e.amount)} onRemove={() => { deleteExpense(e.id); toast('Expense removed'); }} />
-          ))}
+          {pl.expenses ? <MoneyRow label="− Expenses" value={inr(pl.expenses)} /> : null}
           {pl.stockUsed ? <MoneyRow label="− Stock used" value={inr(pl.stockUsed)} /> : null}
           <MoneyRow total label={pl.profit < 0 ? 'Loss' : 'Profit'} value={signed(pl.profit)} color={pl.profit < 0 ? c.bad : c.good} />
           {!pl.cost ? <T muted size={12.5}>Add staff wages and expenses like diesel, transport and food to see the real profit.</T> : null}

@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { TextInput, View } from 'react-native';
-import { Screen, List, Empty, Chips, LinkBtn } from '../components/ui';
+import { Screen, List, Empty, Chips, LinkBtn, HeaderBtn } from '../components/ui';
 import { ProjRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
@@ -23,7 +23,7 @@ export default function BookingsScreen({ navigation }) {
   const [q, setQ] = useState('');
 
   useLayoutEffect(() => {
-    navigation.setOptions({ headerRight: () => <View style={{ marginRight: 16 }}><LinkBtn onPress={() => navigation.navigate('BookingForm')}>+ New</LinkBtn></View> });
+    navigation.setOptions({ headerRight: () => <HeaderBtn title="+ New" onPress={() => navigation.navigate('BookingForm')} /> });
   }, [navigation]);
 
   const td = today();

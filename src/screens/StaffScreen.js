@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { TextInput, View } from 'react-native';
-import { Screen, List, Empty, Card, MoneyRow, LinkBtn } from '../components/ui';
+import { Screen, List, Empty, Card, MoneyRow, LinkBtn, HeaderBtn } from '../components/ui';
 import { EmpRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
@@ -13,7 +13,7 @@ export default function StaffScreen({ navigation }) {
   const [q, setQ] = useState('');
 
   useLayoutEffect(() => {
-    navigation.setOptions({ headerRight: () => <View style={{ marginRight: 16 }}><LinkBtn onPress={() => navigation.navigate('StaffForm')}>+ Add</LinkBtn></View> });
+    navigation.setOptions({ headerRight: () => <HeaderBtn title="+ Add" onPress={() => navigation.navigate('StaffForm')} /> });
   }, [navigation]);
 
   const qq = q.trim().toLowerCase();

@@ -6,10 +6,19 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": { "supportsTablet": true, "bundleIdentifier": "com.regalmusic.manager" },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.regalmusic.manager"
+    },
     "android": {
       "package": "com.regalmusic.manager",
-      "adaptiveIcon": { "backgroundColor": "#1c1325" }
-    }
+      "adaptiveIcon": {
+        "backgroundColor": "#1c1325"
+      }
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-font"
+    ]
   }
 }

@@ -1,6 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Row, Tile, Pill, RemoveBtn } from './ui';
+
+const MOVE_ICONS = { in: 'add', out: 'remove', repair: 'construct-outline', fixed: 'checkmark', adjust: 'swap-vertical' };
 import { useTheme } from '../theme';
 import { useStore } from '../store';
 import { MOVE_TYPES, STATUSES, specSummary } from '../defaults';
@@ -64,7 +66,7 @@ export function LedRow({ l }) {
   const earn = l.kind === 'earn';
   return (
     <Row
-      left={<Tile top={earn ? 'W' : '₹'} t={earn ? 'warn' : 'good'} />}
+      left={<Tile icon={earn ? 'briefcase-outline' : 'cash-outline'} t={earn ? 'warn' : 'good'} />}
       title={e ? e.name : 'Removed staff'}
       sub={[dmy(l.date), earn ? 'Work' + (l.qty ? ' ×' + l.qty : '') : 'Paid · ' + (l.mode || 'Cash'), p && p.customerName, l.note].filter(Boolean).join(' · ')}
       right={(earn ? '+' : '−') + inr(l.amount)}
@@ -102,7 +104,7 @@ export function MoveRow({ m, showItem }) {
   const sign = m.type === 'in' ? '+' : m.type === 'out' ? '−' : m.type === 'adjust' && n(m.qty) > 0 ? '+' : '';
   return (
     <Row
-      left={<Tile top={{ in: '+', out: '−', repair: '⚒', fixed: '✓', adjust: '±' }[m.type] || '±'} t={t.tone} />}
+      left={<Tile icon={MOVE_ICONS[m.type] || 'swap-vertical'} t={t.tone} />}
       title={showItem ? it.name || 'Removed item' : t.label}
       sub={[dmy(m.date), showItem ? t.label : '', p && p.customerName, m.cost ? inr(m.cost) : '', m.note].filter(Boolean).join(' · ')}
       right={sign + qtyTxt(m.type === 'adjust' ? Math.abs(n(m.qty)) : m.qty, it.unit)}

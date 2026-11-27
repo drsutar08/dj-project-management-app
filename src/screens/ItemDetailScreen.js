@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Screen, Card, T, H2, KV, Btn, BtnRow, List, Empty, LinkBtn, Pill, Sheet, Field, DateField, Chips, opts, toast } from '../components/ui';
+import { Screen, Card, T, H2, KV, Btn, BtnRow, List, Empty, LinkBtn, Pill, Sheet, Field, DateField, Chips, opts, toast, HeaderBtn } from '../components/ui';
 import { MoveRow, ProjRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
@@ -26,7 +26,7 @@ export default function ItemDetailScreen({ navigation, route }) {
 
   useLayoutEffect(() => {
     if (!it) return;
-    navigation.setOptions({ title: it.name, headerRight: () => <LinkBtn onPress={() => navigation.navigate('ItemForm', { id: it.id })}>Edit</LinkBtn> });
+    navigation.setOptions({ title: it.name, headerRight: () => <HeaderBtn title="Edit" onPress={() => navigation.navigate('ItemForm', { id: it.id })} /> });
   }, [navigation, it]);
 
   if (!it) return <Screen><Empty title="Item not found" text="It may have been deleted." /></Screen>;

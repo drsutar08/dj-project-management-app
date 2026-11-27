@@ -1,6 +1,6 @@
 import React, { useLayoutEffect } from 'react';
 import { View, Pressable } from 'react-native';
-import { Screen, T, H2, List, Empty, Row, Tile } from '../components/ui';
+import { Screen, T, H2, List, Empty, Row, Tile, Icon } from '../components/ui';
 import { ProjRow } from '../components/rows';
 import { useStore, useSorted } from '../store';
 import { useTheme, shadow } from '../theme';
@@ -19,16 +19,21 @@ function HeroCard({ icon, title, sub, note, onPress, children }) {
     >
       <View style={{ width: 76, height: 76, borderRadius: 20, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         <View style={{ position: 'absolute', width: 60, height: 60, borderRadius: 30, backgroundColor: c.accent2, opacity: 0.25, right: -18, bottom: -18 }} />
-        <T size={34} weight="800" color={c.accent}>{icon}</T>
+        <Icon name={icon} size={34} color={c.accent} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <T size={16} weight="800" numberOfLines={1}>{title}</T>
         {sub ? <T size={13} muted style={{ marginTop: 2 }} numberOfLines={2}>{sub}</T> : null}
         {children}
-        {note ? <T size={12} weight="700" color={c.plum} style={{ marginTop: 6 }}>{note}</T> : null}
+        {note ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
+            <Icon name="flash" size={13} color={c.warn} />
+            <T size={12} weight="700" color={c.plum}>{note}</T>
+          </View>
+        ) : null}
       </View>
       <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' }}>
-        <T size={18} weight="800" color={c.accentInk}>›</T>
+        <Icon name="chevron-forward" size={20} color={c.accentInk} />
       </View>
     </Pressable>
   );
@@ -45,10 +50,10 @@ function ActionTile({ color, icon, title, sub, badge, onPress }) {
         { shadowColor: color, shadowOpacity: 0.3 },
       ]}
     >
-      <T size={86} weight="800" color="#ffffff" style={{ position: 'absolute', right: -6, bottom: -22, opacity: 0.16 }}>{icon}</T>
+      <Icon name={icon} size={92} color="#ffffff" style={{ position: 'absolute', right: -12, bottom: -14, opacity: 0.16 }} />
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <View style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' }}>
-          <T size={19} weight="800" color="#ffffff">{icon}</T>
+          <Icon name={icon} size={21} color="#ffffff" />
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           {badge ? (
@@ -57,7 +62,7 @@ function ActionTile({ color, icon, title, sub, badge, onPress }) {
             </View>
           ) : null}
           <View style={{ width: 28, height: 28, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' }}>
-            <T size={14} weight="800" color="#ffffff">↗</T>
+            <Icon name="mci:arrow-top-right" size={17} color="#ffffff" />
           </View>
         </View>
       </View>
@@ -84,7 +89,7 @@ export default function HomeScreen({ navigation }) {
           accessibilityLabel="Business details and settings"
           style={{ marginRight: 16, width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }}
         >
-          <T size={24} weight="700">☰</T>
+          <Icon name="menu" size={26} />
         </Pressable>
       ),
     });
@@ -107,15 +112,15 @@ export default function HomeScreen({ navigation }) {
     <Screen>
       {!settings.name ? (
         <HeroCard
-          icon="♫"
+          icon="musical-notes"
           title="Set up your business"
           sub="Add your name, phone numbers, address and bill rules"
-          note="⚡ Takes about 2 minutes"
+          note="Takes about 2 minutes"
           onPress={() => navigation.navigate('Settings')}
         />
       ) : null}
 
-      <HeroCard icon="₹" title="Customers owe you" onPress={() => navigation.navigate('Payments')}>
+      <HeroCard icon="wallet" title="Customers owe you" onPress={() => navigation.navigate('Payments')}>
         <T size={28} weight="800" style={{ letterSpacing: -0.8, marginTop: 2 }}>{inr(custDue)}</T>
         <T size={12.5} muted numberOfLines={1}>
           Staff to pay {inr(staffDue)} · {MON[new Date().getMonth()]} {inr(monthRev)}
@@ -125,32 +130,32 @@ export default function HomeScreen({ navigation }) {
       <View style={{ gap: 12 }}>
         <T size={17} weight="800" style={{ letterSpacing: -0.3 }}>What do you want to do?</T>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-          <ActionTile color={c.tiles.purple} icon="+" title="New booking" sub="Customer, date & advance" onPress={() => navigation.navigate('BookingForm')} />
+          <ActionTile color={c.tiles.purple} icon="add" title="New booking" sub="Customer, date & advance" onPress={() => navigation.navigate('BookingForm')} />
           <ActionTile
             color={c.tiles.green}
-            icon="▦"
+            icon="calendar"
             title="Bookings"
             sub={up.length ? `${up.length} upcoming · next ${dmy(up[0].bookingDate)}` : 'No upcoming programmes'}
             onPress={() => navigation.navigate('Bookings')}
           />
           <ActionTile
             color={c.tiles.blue}
-            icon="☺"
+            icon="people"
             title="Staff & pay"
             sub={staffDue ? inr(staffDue) + ' to pay' : employees.length + ' staff · all settled'}
             onPress={() => navigation.navigate('Staff')}
           />
           <ActionTile
             color={c.tiles.orange}
-            icon="▤"
+            icon="cube"
             title="Stock"
-            sub={items.length ? `${items.length} items${low.length ? ` · ${low.length} low` : ''}` : 'Bass, line array, cords…'}
+            sub={items.length ? `${items.length} item${items.length === 1 ? '' : 's'}${low.length ? ` · ${low.length} low` : ''}` : 'Bass, line array, cords…'}
             badge={low.length ? 'LOW' : ''}
             onPress={() => navigation.navigate('Stock')}
           />
           <ActionTile
             color={c.tiles.pink}
-            icon="≣"
+            icon="receipt"
             title="Bills"
             sub={toBill.length ? `${toBill.length} ready to bill` : `${billed} billed`}
             badge={toBill.length ? 'DUE' : ''}
@@ -158,7 +163,7 @@ export default function HomeScreen({ navigation }) {
           />
           <ActionTile
             color={c.tiles.violet}
-            icon="↗"
+            icon="trending-up"
             title="Profit & loss"
             sub={MON[mm - 1] + ': ' + (monthPL.profit < 0 ? 'loss ' : 'profit ') + signed(monthPL.profit).replace(/^[+−]/, '')}
             onPress={() => navigation.navigate('Reports')}
